@@ -21,6 +21,8 @@ DATA_SCHEMA = vol.Schema({
     vol.Required("spot_hourly", default = False, description = {SUGGESTED_VALUE: False}): bool,
     vol.Required("cost_fee", default = 0.3, description = {SUGGESTED_VALUE: 0.3}): float,
     vol.Required("compensation_fee", default = 0.4, description = {SUGGESTED_VALUE: 0.4}): float,
+    vol.Required("capacity", default = 9.7, description = {SUGGESTED_VALUE: 9.7}): float,
+    vol.Required("amortization", default = 2.0, description = {SUGGESTED_VALUE: 2.0}): float,
     vol.Optional("key", default = "", description = {SUGGESTED_VALUE: ""}): str,
 })
 

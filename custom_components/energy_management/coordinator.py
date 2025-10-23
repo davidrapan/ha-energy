@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import itertools
 
 from decimal import Decimal
+from logging import getLogger
 from zoneinfo import ZoneInfo
 from datetime import datetime, timedelta
 from collections.abc import AsyncGenerator
@@ -33,7 +33,7 @@ from . import common
 from .const import DOMAIN, TIMEZONE, TIME_QOUR, TIME_HOUR, TIME_DAY, ZERO_DECIMAL, SQL_QUERY_TEMPLATE, SQL_QUERY_MYSQL_PARAMS, SQL_QUERY_SQLITE_PARAMS
 from .providers import get_function
 
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = getLogger(__name__)
 
 _URL = "https://optimization.ranware.com/v0"
 
@@ -104,6 +104,12 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
         self._data: CoordinatorData = None
 
         self.battery = 0.20
+
+        self.number_charge_power = 5.0
+        self.number_discharge_power = 5.0
+        self.number_soc_min = 0.20
+        self.number_soc_max = 0.90
+
         self.cost_total: dict[datetime | None, float | int] = {}
 
         self.forecast: dict[datetime, float | int] = {}
@@ -120,7 +126,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
         self.predicted_amortization: float = .0
         self.optimization: list[tuple[int, float, bool]] = []
 
-        self.price: float = None
+        self.cost_rate_today: float = None
 
         self.default_service_info = {
             ATTR_IDENTIFIERS: {(DOMAIN, config_entry.entry_id)},
@@ -205,6 +211,8 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
         self.config_spot_hourly = self.config_entry.options.get("spot_hourly", False)
         self.config_cost_fee = Decimal(self.config_entry.options.get("cost_fee", 0.3))
         self.config_compensation_fee = Decimal(self.config_entry.options.get("compensation_fee", 0.4))
+        self.config_capacity = Decimal(self.config_entry.options.get("capacity", 9.7))
+        self.config_amortization = Decimal(self.config_entry.options.get("amortization", 2.0))
         self.config_key = self.config_entry.options.get("key", "")
         _LOGGER.debug(f"Area: {self.config_area}, rate: {self.config_rate}, tariff: {self.config_tariff}, cost_fee: {self.config_cost_fee}, compensation_fee: {self.config_compensation_fee}, spot_hourly: {self.config_spot_hourly}")
         try:
@@ -334,9 +342,9 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                         self.exported[k] = c / 4 if (c := v.get("exported")) is not None else None
                         self.cost[k] = c / 4 if (c := v.get("cost")) is not None else None
                     if (cost_sum := sum(filter(None, self.cost.values()))) > 0 and (imported_sum := sum(filter(None, self.imported.values()))) > 0:
-                        self.price = cost_sum / imported_sum
+                        self.cost_rate_today = cost_sum / imported_sum
                     else:
-                        self.price = None
+                        self.cost_rate_today = None
                     if not now in self.cost_total:
                         # if len(battery_entities) > 0:
                         #     with session_scope(hass = self.hass) as session:
@@ -359,7 +367,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                     #"consumption": [c - self.imported[k] + self.exported[k] if (c := self.today_consumption.get(k)) and c is not None else (self.consumption[k] * 1.20) for k in self.consumption.keys() if k >= self.now_block],
                     #"consumption": [self.consumption_max[self.now_block]] + [t if (c := self.consumption[k] * 1.20) is not None and (t := self.today_consumption.get(k)) is not None and t > c else c for k in self.consumption.keys() if k < self.now_block],
                     "consumption": [self.consumption_max[self.now_block] * 1.20] + [self.consumption[k] * 1.20 for k in self.consumption.keys() if k > self.now_block],
-                    "constraints": {"soc": self.battery / 100, "charge_power": 5.0 / 4, "discharge_power": 5.0 / 4, "soc_min": 0.20, "soc_max": 0.90, "capacity": 9.7, "amortization": 2.0}
+                    "constraints": {"soc": self.battery / 100, "charge_power": self.number_charge_power / 4, "discharge_power": self.number_discharge_power / 4, "soc_min": self.number_soc_min / 100, "soc_max": self.number_soc_max / 100, "capacity": self.config_capacity, "amortization": self.config_amortization}
                 }
                 if (r := await common.pg(_URL, json = json, headers = { "X-API-Key": self.config_key })) is not None:
                     _LOGGER.debug(f"Optimization of {json}: {r}")

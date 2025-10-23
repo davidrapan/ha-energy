@@ -19,13 +19,13 @@ async def async_setup_entry(_: HomeAssistant, config_entry: ConfigEntry[Coordina
     _LOGGER.debug(f"async_setup_entry: {config_entry}")
 
     async_add_entities([
-        CompRate(config_entry.runtime_data),
         CostRate(config_entry.runtime_data),
+        CostRateToday(config_entry.runtime_data),
+        CostRateOrder(config_entry.runtime_data),
+        CompRate(config_entry.runtime_data),
         SpotRate(config_entry.runtime_data),
-        Order(config_entry.runtime_data),
-        PriceToday(config_entry.runtime_data),
         Cost(config_entry.runtime_data),
-        Consumption(config_entry.runtime_data),
+        #Consumption(config_entry.runtime_data),
         Battery(config_entry.runtime_data)
     ])
 
@@ -33,17 +33,17 @@ class EnergyManagementSensorEntity(EnergyManagementEntity, SensorEntity):
     pass
 
 class EnergyManagementRestoreSensor(EnergyManagementEntity, RestoreSensor):
-    async def async_added_to_hass(self) -> None:
+    async def async_added_to_hass(self):
         await super().async_added_to_hass()
         if last_sensor_data := await self.async_get_last_sensor_data():
             self._attr_native_value = last_sensor_data.native_value
 
 class CompRate(EnergyManagementSensorEntity):
-    _attr_icon = "mdi:cash"
+    _attr_icon = "mdi:cash-clock"
 
     def __init__(self, coordinator: Coordinator) -> None:
         self._attr_name = "Compensation rate"
-        self._attr_native_unit_of_measurement = "CZK/kWh"
+        self._attr_native_unit_of_measurement = "CZK/kWh" if coordinator.hass.config.currency in ("CZK", "Kč") else "EUR/kWh"
         self._attr_suggested_display_precision = 2
         super().__init__(coordinator)
 
@@ -55,11 +55,11 @@ class CompRate(EnergyManagementSensorEntity):
         self._attr_native_value = data.compensation_rate[self.now(data.zone_info)]
 
 class CostRate(EnergyManagementSensorEntity):
-    _attr_icon = "mdi:cash"
+    _attr_icon = "mdi:cash-clock"
 
     def __init__(self, coordinator: Coordinator) -> None:
         self._attr_name = "Cost rate"
-        self._attr_native_unit_of_measurement = "CZK/kWh"
+        self._attr_native_unit_of_measurement = "CZK/kWh" if coordinator.hass.config.currency in ("CZK", "Kč") else "EUR/kWh"
         self._attr_suggested_display_precision = 2
         super().__init__(coordinator)
 
@@ -70,12 +70,38 @@ class CostRate(EnergyManagementSensorEntity):
         self._attr_extra_state_attributes = {k.astimezone(self.coordinator.data.zone_info).isoformat(): float(v) for k, v in data.rates_full.items()}
         self._attr_native_value = data.rates_full[self.now(data.zone_info)]
 
+class CostRateToday(EnergyManagementSensorEntity):
+    _attr_icon = "mdi:cash-clock"
+
+    def __init__(self, coordinator: Coordinator) -> None:
+        self._attr_name = "Cost rate - today"
+        self._attr_native_unit_of_measurement = "CZK/kWh" if coordinator.hass.config.currency in ("CZK", "Kč") else "EUR/kWh"
+        self._attr_suggested_display_precision = 2
+        super().__init__(coordinator)
+
+    def update(self):
+        super().update()
+        self._attr_native_value = self.coordinator.cost_rate_today or self.coordinator.data.mean
+
+class CostRateOrder(EnergyManagementSensorEntity):
+    _attr_icon = "mdi:order-numeric-ascending"
+
+    def __init__(self, coordinator: Coordinator) -> None:
+        self._attr_name = "Cost rate order"
+        super().__init__(coordinator)
+
+    def update(self):
+        super().update()
+        if (data := self.coordinator.data) is None:
+            return
+        self._attr_native_value = sorted(set(data.rates.values())).index(data.rates[self.now(data.zone_info)]) + 1
+
 class SpotRate(EnergyManagementSensorEntity):
-    _attr_icon = "mdi:cash"
+    _attr_icon = "mdi:cash-clock"
 
     def __init__(self, coordinator: Coordinator) -> None:
         self._attr_name = "Spot rate"
-        self._attr_native_unit_of_measurement = "CZK/kWh"
+        self._attr_native_unit_of_measurement = "CZK/kWh" if coordinator.hass.config.currency in ("CZK", "Kč") else "EUR/kWh"
         self._attr_suggested_display_precision = 2
         super().__init__(coordinator)
 
@@ -85,49 +111,6 @@ class SpotRate(EnergyManagementSensorEntity):
             return
         self._attr_extra_state_attributes = {k.astimezone(self.coordinator.data.zone_info).isoformat(): float(v) for k, v in data.spot_rate.items()}
         self._attr_native_value = data.spot_rate[self.now(data.zone_info)]
-
-class Order(EnergyManagementSensorEntity):
-    _attr_icon = "mdi:order-numeric-ascending"
-
-    def __init__(self, coordinator: Coordinator) -> None:
-        self._attr_name = "Order"
-        super().__init__(coordinator)
-
-    def update(self):
-        super().update()
-        if (data := self.coordinator.data) is None:
-            return
-        self._attr_native_value = sorted(set(data.rates.values())).index(data.rates[self.now(data.zone_info)]) + 1
-
-class Price(EnergyManagementSensorEntity):
-    _attr_icon = "mdi:cash"
-
-    def __init__(self, coordinator: Coordinator) -> None:
-        self._attr_name = "Price"
-        self._attr_native_unit_of_measurement = "CZK" if coordinator.hass.config.currency in ("CZK", "Kč") else "EUR"
-        self._attr_suggested_display_precision = 2
-        super().__init__(coordinator)
-
-    def update(self):
-        super().update()
-        if not (data := self.coordinator.data):
-            return
-        self._attr_extra_state_attributes["mean"] = float(data.mean)
-        self._attr_extra_state_attributes["values"] = {k.astimezone(self.coordinator.data.zone_info).isoformat(): float(v) for k, v in data.rates_full.items()}
-        self._attr_native_value = data.rates_full[self.now(data.zone_info)]
-
-class PriceToday(EnergyManagementSensorEntity):
-    _attr_icon = "mdi:cash"
-
-    def __init__(self, coordinator: Coordinator) -> None:
-        self._attr_name = "Price - today"
-        self._attr_native_unit_of_measurement = "CZK" if coordinator.hass.config.currency in ("CZK", "Kč") else "EUR"
-        self._attr_suggested_display_precision = 2
-        super().__init__(coordinator)
-
-    def update(self):
-        super().update()
-        self._attr_native_value = self.coordinator.price or self.coordinator.data.mean
 
 class Consumption(EnergyManagementSensorEntity):
     def __init__(self, coordinator: Coordinator) -> None:

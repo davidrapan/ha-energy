@@ -16,7 +16,7 @@ def _get_tariff(tariff: tuple[tuple[int | float, int | float]] | list[tuple[tupl
 
 @cache
 def _get_distribution(area: str, rate: str, tariff: str, year: int, weekday: int, hour: int | float) -> Decimal:
-    return RATE[year][""] + RATE[year][area][rate][_get_tariff(RATE[year][area][rate]["Type"][tariff[-2:]] if tariff in TARIFF and RATE[year][area][rate]["Name"] == tariff[:-2] else (), weekday, hour)]
+    return RATE[year][""] + RATE[year][area][rate][_get_tariff(RATE[year][area][rate]["Type"][tariff[-2:]] if "Type" in RATE[year][area][rate] and tariff in TARIFF and RATE[year][area][rate]["Name"] == tariff[:-2] else (), weekday, hour)]
 
 @cache
 def _get_distribution_function(area: str, rate: str, tariff: str):

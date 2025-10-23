@@ -1,21 +1,22 @@
 from __future__ import annotations
 
-import logging
+from logging import getLogger
 
 from homeassistant import loader
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.config_entries import ConfigEntry
 
 from .const import DOMAIN
 from .common import strepr
 from .coordinator import Coordinator
 
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = getLogger(__name__)
 
-_PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
+_PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.NUMBER]
 
 CONFIG_SCHEMA = config_validation.empty_config_schema(DOMAIN)
 
@@ -44,6 +45,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry[Coord
 
     await hass.config_entries.async_forward_entry_setups(config_entry, _PLATFORMS)
 
+    # Post forward setup
+    #
+    _LOGGER.debug(f"async_setup_entry: Coordinator.async_refresh")
+
+    await config_entry.runtime_data.async_refresh()
+
     # Add update listener
     #
     _LOGGER.debug(f"async_setup_entry: config_entry.add_update_listener(async_update_listener)")
@@ -64,3 +71,8 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry[Coor
     _LOGGER.debug(f"async_unload_entry: hass.config_entries.async_unload_platforms: {_PLATFORMS}")
 
     return await hass.config_entries.async_unload_platforms(config_entry, _PLATFORMS)
+
+async def async_remove_config_entry_device(_: HomeAssistant, config_entry: ConfigEntry[Coordinator], device_entry: DeviceEntry):
+    _LOGGER.debug(f"async_remove_config_entry_device({config_entry.as_dict()}, {device_entry})")
+
+    return not (config_entry.entry_id == device_entry.primary_config_entry or any(identifier for identifier in device_entry.identifiers if identifier[0] == DOMAIN and (identifier[1] == config_entry.entry_id)))
