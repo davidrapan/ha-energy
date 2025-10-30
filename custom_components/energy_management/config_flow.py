@@ -5,7 +5,9 @@ import voluptuous as vol
 from typing import Any
 from logging import getLogger
 
+from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
+from homeassistant.helpers import selector
 from homeassistant.core import callback
 
 from .const import DOMAIN
@@ -19,8 +21,12 @@ DATA_SCHEMA = vol.Schema({
     vol.Required("rate", default = "D57d", description = {SUGGESTED_VALUE: "D57d"}): str,
     vol.Required("tariff", default = "EVV1", description = {SUGGESTED_VALUE: "EVV1"}): str,
     vol.Required("spot_hourly", default = False, description = {SUGGESTED_VALUE: False}): bool,
-    vol.Required("cost_fee", default = 0.3, description = {SUGGESTED_VALUE: 0.3}): float,
-    vol.Required("compensation_fee", default = 0.4, description = {SUGGESTED_VALUE: 0.4}): float,
+    vol.Required("cost_fee", default = 0.3, description = {SUGGESTED_VALUE: 0.3}): vol.Coerce(float),
+    vol.Required("compensation_fee", default = 0.4, description = {SUGGESTED_VALUE: 0.4}): vol.Coerce(float),
+    vol.Required("capacity", default = 9.7, description = {SUGGESTED_VALUE: 9.7}): vol.Coerce(float),
+    vol.Required("amortization", default = 2.0, description = {SUGGESTED_VALUE: 2.0}): vol.Coerce(float),
+    vol.Optional("battery_entity_ids", description = {SUGGESTED_VALUE: None}): selector.EntitySelector(selector.EntitySelectorConfig(device_class = SensorDeviceClass.BATTERY, multiple = True)),
+    vol.Optional("exclude_entity_ids", description = {SUGGESTED_VALUE: None}): selector.EntitySelector(selector.EntitySelectorConfig(device_class = SensorDeviceClass.ENERGY, multiple = True)),
     vol.Optional("key", default = "", description = {SUGGESTED_VALUE: ""}): str,
 })
 

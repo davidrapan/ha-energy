@@ -1,6 +1,9 @@
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 VAT = Decimal(".21")
+
+TIMEZONE = ZoneInfo("Europe/Prague")
 
 RATE = {
     2025: {
@@ -92,7 +95,7 @@ RATE = {
                 }
             }
         },
-        "EGD": {
+        "EG.D": {
             "D01d": {
                 "T1": Decimal("2.69479")
             },

@@ -7,7 +7,7 @@
 [![Discussions](https://img.shields.io/badge/discussions-orange)](https://github.com/davidrapan/ha-energy/discussions)
 
 > [!IMPORTANT]  
-> For [OTE, a.s.](https://www.ote-cr.cz/en/)
+> For [OTE, a.s.](https://www.ote-cr.cz/en/) and [ČEZ Distribuce, a. s.](https://www.cezdistribuce.cz/)
 
 ## 🔌 Installation
 
