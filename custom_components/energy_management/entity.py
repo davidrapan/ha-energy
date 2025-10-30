@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 from decimal import Decimal
-from zoneinfo import ZoneInfo
 from datetime import date, datetime, time
 
 from homeassistant.util import slugify
@@ -32,12 +31,6 @@ class EnergyManagementEntity(CoordinatorEntity[Coordinator]):
     def _handle_coordinator_update(self) -> None:
         self.update()
         self.async_write_ha_state()
-
-    def now(self, tz: ZoneInfo) -> datetime:
-        return dt.replace(minute = (dt.minute // 15 * 15), second = 0, microsecond = 0) if (dt := datetime.now(tz)) else None
-
-    def now_index(self, tz: ZoneInfo) -> int:
-        return n.hour * 4 + n.minute // 15 if (n := self.now(self.coordinator.data.zone_info)) else None
 
     def update(self):
         self._attr_extra_state_attributes = {}

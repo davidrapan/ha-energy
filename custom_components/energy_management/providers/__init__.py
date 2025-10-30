@@ -1,4 +1,5 @@
 from datetime import datetime, time
+from aiohttp import ClientSession
 from functools import lru_cache
 from decimal import Decimal
 
@@ -22,6 +23,9 @@ async def _default(dt: datetime, **kwargs: list[float]):
     for i in range(24):
         yield datetime.combine(t, time(i, tzinfo = dt.tzinfo)).astimezone(TIMEZONE), *((r[i], r[i]) if i < len(r) else (PZERO_DECIMAL, PZERO_DECIMAL))
 
+def _get_default(_: ClientSession, _area: str, _rate: str, _tariff: str, _fee: tuple[float | Decimal] | float | Decimal, _pmod: str, _currency: str):
+    return _default, lambda _: False
+
 @lru_cache(maxsize = len(_map) + 1)
-def get_function(area: str, rate: str, tariff: str, pmod: str, fee: tuple[Decimal] | Decimal, country: str, currency: str):
-    return f(area, rate, tariff, fee, pmod, currency) if (f := _map.get(country)) else _default
+def get_function(s: ClientSession, area: str, rate: str, tariff: str, pmod: str, fee: tuple[float | Decimal] | float | Decimal, country: str, currency: str):
+    return _map.get(country, _get_default)(s, area, rate, tariff, fee, pmod, currency)

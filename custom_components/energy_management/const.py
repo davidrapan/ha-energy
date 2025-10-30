@@ -9,6 +9,7 @@ DOMAIN = "energy_management"
 TIMEZONE = ZoneInfo("UTC")
 
 TIME_QOUR = timedelta(minutes = 15)
+TIME_DOUR = timedelta(minutes = 30)
 TIME_HOUR = timedelta(hours = 1)
 TIME_DAY = timedelta(days = 1)
 
@@ -30,7 +31,7 @@ WITH filtered AS (
     JOIN
         statistics_meta sm ON t.metadata_id = sm.id
     WHERE
-        {unixtim2} >= {date_sub} AND sm.statistic_id IN ({from_ids}, {to_ids}, 'sensor.antminer_energy', 'sensor.water_heater_energy', {cost_ids}, {compensation_ids})
+        {unixtim2} >= {date_sub} AND sm.statistic_id IN ({from_ids}, {to_ids}, {exclude_ids}, {cost_ids}, {compensation_ids})
 ),
 filtered_diff AS (
     SELECT
@@ -51,7 +52,7 @@ arithmetic AS (
         CASE WHEN day_of_week IN ({{slot}}) THEN hour_of_day ELSE hour_of_day + 24 END AS hour_of_day,
         day_of_week,
         SUM(CASE WHEN statistic_id IN ({from_ids}) THEN diff ELSE 0 END)
-        - SUM(CASE WHEN statistic_id IN ({to_ids}, 'sensor.antminer_energy', 'sensor.water_heater_energy') THEN diff ELSE 0 END) as essential,
+        - SUM(CASE WHEN statistic_id IN ({to_ids}, {exclude_ids}) THEN diff ELSE 0 END) as essential,
         SUM(CASE WHEN statistic_id IN ({from_ids}) THEN diff ELSE 0 END)
         - SUM(CASE WHEN statistic_id IN ({to_ids}) THEN diff ELSE 0 END) as consumption,
         SUM((CASE WHEN statistic_id IN ({prod_ids}) THEN diff ELSE 0 END)) AS production,

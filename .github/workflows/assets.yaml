@@ -13,15 +13,18 @@ jobs:
       uses: actions/checkout@v4
       with:
         submodules: true
-    - name: Set
+    - name: Prepare environment - Workspace
       run: |
           echo "workspace=${{ github.workspace }}" >> $GITHUB_ENV
-          echo "name=$(echo ${{ github.event.repository.name }} | sed 's/^[^-]*-//')" >> $GITHUB_ENV
-          echo "version=$(echo '${{ github.event.release.name }}' | cut -c 2-)" >> $GITHUB_ENV
-    - name: Prepare
+    - name: Prepare environment - Name
+      run: |
+          cd $workspace/custom_components/ && echo "name=$(echo $(ls -d */) | sed 's/\/.*//')" >> $GITHUB_ENV
+    - name: Prepare environment - Version
+      run: |
+          sed -i "s/0\.0\.0/$(echo '${{ github.event.release.name }}' | cut -c 2-)/g" $workspace/custom_components/$name/manifest.json
+    - name: Prepare environment - License
       run: |
           cp $workspace/license $workspace/custom_components/$name/
-          sed -i "s/0\.0\.0/$version/g" $workspace/custom_components/$name/manifest.json
     - name: Zip
       run: |
           cd $workspace/custom_components/$name
@@ -30,4 +33,4 @@ jobs:
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
-        files: ${{ env.workspace }}/custom_components/${{ env.name }}.zip
+        files: $workspace/custom_components/$name.zip
