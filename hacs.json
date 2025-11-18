@@ -1,0 +1,6 @@
+{
+    "name": "Energy Management",
+    "zip_release": true,
+    "filename": "energy_management.zip",
+    "homeassistant": "2025.2.0"
+}

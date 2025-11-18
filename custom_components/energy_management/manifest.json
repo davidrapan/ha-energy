@@ -1,0 +1,15 @@
+{
+  "domain": "energy_management",
+  "name": "Energy Management",
+  "after_dependencies": ["sql", "forecast_solar", "solcast_solar", "solcast"],
+  "codeowners": ["@davidrapan"],
+  "config_flow": true,
+  "dependencies": ["recorder", "energy"],
+  "documentation": "https://github.com/davidrapan/ha-energy",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/davidrapan/ha-energy/issues",
+  "requirements": ["aiomysql", "aiosqlite", "asyncpg", "SQLAlchemy[asyncio]"],
+  "single_config_entry": true,
+  "version": "0.0.0"
+}

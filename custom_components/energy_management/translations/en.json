@@ -1,0 +1,55 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configuration",
+        "data": {
+          "area": "Distribution area (CEZ, EG.D, PRE)",
+          "rate": "Distribution rate (D25d, D57d, ..)",
+          "tariff": "Tariff (AKU8V6, EVV1, ..)",
+          "spot_hourly": "Hourly electricity market",
+          "cost_fee": "Market fee - buy [CZK/kWh]",
+          "compensation_fee": "Market fee - sell [CZK/kWh]",
+          "capacity": "Capacity [kWh]",
+          "amortization": "Amortization [CZK/kWh]",
+          "battery_entity_ids": "Battery entities",
+          "exclude_entity_ids": "Exclude entities",
+          "key": "Key"
+        },
+        "data_description": {
+          "battery_entity_ids": "Fill in only if necessary",
+          "exclude_entity_ids": "Entities that will not be used for calculating consumption"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configuration",
+        "data": {
+          "area": "Distribution area (CEZ, EG.D, PRE)",
+          "rate": "Distribution rate (D25d, D57d, ..)",
+          "tariff": "Tariff (AKU8V6, EVV1, ..)",
+          "spot_hourly": "Hourly electricity market",
+          "cost_fee": "Market fee - buy [CZK/kWh]",
+          "compensation_fee": "Market fee - sell [CZK/kWh]",
+          "capacity": "Capacity [kWh]",
+          "amortization": "Amortization [CZK/kWh]",
+          "battery_entity_ids": "Battery entities",
+          "exclude_entity_ids": "Exclude entities",
+          "key": "Key"
+        },
+        "data_description": {
+          "battery_entity_ids": "Fill in only if necessary",
+          "exclude_entity_ids": "Enter entities that will not be used for calculating consumption"
+        }
+      }
+    }
+  },
+  "system_health": {
+    "info": {
+      "can_reach_server": "Reach ranware.com"
+    }
+  }
+}

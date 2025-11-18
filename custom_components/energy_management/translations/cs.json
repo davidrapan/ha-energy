@@ -1,0 +1,55 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Konfigurace",
+        "data": {
+          "area": "Distribuční území (CEZ, EG.D, PRE)",
+          "rate": "Distribuční sazba (D25d, D57d, ..)",
+          "tariff": "Tarif (AKU8V6, EVV1, ..)",
+          "spot_hourly": "Hodinový trh s elektřinou",
+          "cost_fee": "Poplatek služby obchodu - nákup [CZK/kWh]",
+          "compensation_fee": "Poplatek služby obchodu - prodej [CZK/kWh]",
+          "capacity": "Kapacita [kWh]",
+          "amortization": "Amortizace [CZK/kWh]",
+          "battery_entity_ids": "Entity baterie",
+          "exclude_entity_ids": "Vyloučené entity",
+          "key": "Klíč"
+        },
+        "data_description": {
+          "battery_entity_ids": "Vyplnit jen v příapdě potřeby",
+          "exclude_entity_ids": "Zadejte entity, které nebudou použity při výpočtu spotřeby"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Konfigurace",
+        "data": {
+          "area": "Distribuční území (CEZ, EG.D, PRE)",
+          "rate": "Distribuční sazba (D25d, D57d, ..)",
+          "tariff": "Tarif (AKU8V6, EVV1, ..)",
+          "spot_hourly": "Hodinový trh s elektřinou",
+          "cost_fee": "Poplatek služby obchodu - nákup [CZK/kWh]",
+          "compensation_fee": "Poplatek služby obchodu - prodej [CZK/kWh]",
+          "capacity": "Kapacita [kWh]",
+          "amortization": "Amortizace [CZK/kWh]",
+          "battery_entity_ids": "Entity baterie",
+          "exclude_entity_ids": "Vyloučené entity",
+          "key": "Klíč"
+        },
+        "data_description": {
+          "battery_entity_ids": "Vyplnit jen v příapdě potřeby",
+          "exclude_entity_ids": "Zadejte entity, které nebudou použity při výpočtu spotřeby"
+        }
+      }
+    }
+  },
+  "system_health": {
+    "info": {
+      "can_reach_server": "Reach ranware.com"
+    }
+  }
+}
