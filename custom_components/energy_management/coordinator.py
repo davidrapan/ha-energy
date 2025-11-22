@@ -34,7 +34,7 @@ from homeassistant.components.sensor.recorder import compile_statistics
 from homeassistant.components.sql.util import resolve_db_url, redact_credentials
 
 from . import common
-from .util import generate_query_string, generate_lambda_stmt
+from .util import generate_query_string_simple, generate_query_string, generate_lambda_stmt
 from .const import DOMAIN, URL, TIME_QOUR, TIME_DOUR, TIME_HOUR, TIME_DAY, ZERO_DECIMAL
 from .providers import get_function
 
@@ -107,6 +107,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
 
         self.now: datetime | None = None
         self.battery: float | None = None
+        self.battery_max: float = 100
         self.forecast: dict[datetime, float | int] = {}
         self.production: dict[datetime, float | int] = {}
         self.consumption: dict[datetime, float | int] = {}
@@ -187,6 +188,17 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                                 c.setdefault("compensation", []).append(compensation)
                         if energy_price := flow.get("entity_energy_price"):
                             c.setdefault("to_price", []).append(energy_price)
+
+    async def _execute_simple(self, query_str: str):
+        async with self._maker() as session:
+            try:
+                result = await session.execute(generate_lambda_stmt(query_str))
+            except SQLAlchemyError as e:
+                _LOGGER.error(f"Error executing query {query_str}: {redact_credentials(common.strepr(e))}")
+                await session.rollback()
+            else:
+                _LOGGER.debug(f"Query: {query_str}")
+                return result.scalar()
 
     async def _execute(self, query_str: str) -> AsyncGenerator[tuple[datetime, dict[str | Any, Any | None] | dict], None]:
         async with self._maker() as session:
@@ -300,22 +312,21 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                 if (solar_entries := production.get("forecast")) and (forecast_platforms := await async_get_energy_platforms(self.hass)):
                     for solar_entry_id in solar_entries:
                         if (solar_entry := self.hass.config_entries.async_get_entry(solar_entry_id)) and solar_entry is not None and solar_entry.domain in forecast_platforms and (forecast := await forecast_platforms[solar_entry.domain](self.hass, solar_entry_id)) and (wh_hours := forecast["wh_hours"]):
-                            _LOGGER.debug(f"Solar forecast of {solar_entry_id} [W]: {wh_hours}")
                             for k in self.forecast.keys():
-                                if (i := k.isoformat()) and (f := wh_hours.get(i)) is not None and (q := (k + TIME_QOUR).isoformat() in wh_hours or (k - TIME_QOUR).isoformat() in wh_hours) is not None and (d := q or (k + TIME_DOUR).isoformat() in wh_hours or (k - TIME_DOUR).isoformat() in wh_hours) is not None and (f := f / 1000 / ((1 if q else 2) if d else 4)):
+                                if (i := k.isoformat()) and (wh_hour := wh_hours.get(i)) is not None and (q := (k + TIME_QOUR).isoformat() in wh_hours or (k - TIME_QOUR).isoformat() in wh_hours) is not None and (d := q or (k + TIME_DOUR).isoformat() in wh_hours or (k - TIME_DOUR).isoformat() in wh_hours) is not None and (f := wh_hour / 1000 / ((1 if q else 2) if d else 4)):
                                     self.forecast[k] = f
-                                    _LOGGER.debug(f"Solar forecast of {solar_entry_id} for {k}: {f}")
+                                    _LOGGER.debug(f"Solar forecast of {solar_entry_id} for {k} ({wh_hour}): {f}")
                                     if not q:
                                         k2 = k + TIME_QOUR
                                         self.forecast[k2] = f
-                                        _LOGGER.debug(f"Solar forecast of {solar_entry_id} for {k2}: {f}")
+                                        _LOGGER.debug(f"Solar forecast of {solar_entry_id} for {k2} ({wh_hour}): {f}")
                                         if not d:
                                             k3 = k2 + TIME_QOUR
                                             self.forecast[k3] = f
-                                            _LOGGER.debug(f"Solar forecast of {solar_entry_id} for {k3}: {f}")
+                                            _LOGGER.debug(f"Solar forecast of {solar_entry_id} for {k3} ({wh_hour}): {f}")
                                             k4 = k3 + TIME_QOUR
                                             self.forecast[k4] = f
-                                            _LOGGER.debug(f"Solar forecast of {solar_entry_id} for {k4}: {f}")
+                                            _LOGGER.debug(f"Solar forecast of {solar_entry_id} for {k4} ({wh_hour}): {f}")
                 grid = self._energy_entries.setdefault("grid", {})
                 grid_from = grid.get("from", [])
                 grid_to = grid.get("to", [])
@@ -326,47 +337,53 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                 registry = entity_registry.async_get(self.hass)
                 battery_entities = [i for j in battery_from if (e := registry.entities.get_entries_for_device_id(registry.async_get(j).device_id)) for i in e if "battery" in (i.original_device_class, i.device_class)]
                 _LOGGER.debug(f"Production: {production_from}, Grid from: {grid_from}, Grid to: {grid_to}, Battery from: {battery_from}, Battery to: {battery_to}, Battery: {battery_entities}")
+                battery_ids = [j.entity_id for j in battery_entities] + self.config_battery_entity_ids  
                 recorder = get_instance(self.hass)
-                if not self.consumption or next(iter(self.consumption.values())) is None or ((last_hour := common.dt_hour(self.now) - TIME_HOUR) and last_hour in self.today_consumption and self.today_consumption[last_hour] is None):
-                    query_str = generate_query_string(
-                        recorder.dialect_name == SupportedDialect.SQLITE,
-                        common.joinify(*(grid_from + production_from + battery_from)),
-                        common.joinify(*(grid_to + battery_to)),
-                        common.joinify(*production_from),
-                        common.joinify(*grid_from),
-                        common.joinify(*grid_to),
-                        common.joinify(*grid.get("cost", [])),
-                        common.joinify(*grid.get("compensation", [])),
-                        common.joinify(*self.config_exclude_entity_ids),
-                        f"{o[:3]}:{o[3:]}" if (o := local.strftime('%z')) else "+00:00",
-                        1,
-                        today.weekday(),
-                        (today + TIME_DAY).weekday()
-                    )
-                    self.imported.clear()
-                    self.exported.clear()
-                    self.cost.clear()
-                    async for k, v in self._execute(query_str):
-                        _LOGGER.debug(f"Query result {k}: {v}")
-                        self.consumption[k] = c if (c := v.get("mean")) is not None else self.consumption.get(k - TIME_DAY)
-                        self.consumption_max[k] = c if (c := v.get("maximum")) is not None else self.consumption_max.get(k - TIME_DAY)
-                        self.today_consumption[k] = v.get("consumption")
-                        self.production[k] = v.get("production")
-                        self.imported[k] = v.get("imported")
-                        self.exported[k] = v.get("exported")
-                        self.cost[k] = v.get("cost")
-                    if (cost_sum := sum(filter(None, self.cost.values()))) > 0 and (imported_sum := sum(filter(None, self.imported.values()))) > 0:
-                        self.cost_today = cost_sum
-                        self.cost_rate_today = cost_sum / imported_sum
-                    else:
-                        self.cost_today = None
-                        self.cost_rate_today = None
-                    if not self.now in self.cost_total:
-                        self.cost_total.clear()
-                        if (cost_sensors := self.hass.data["energy"]["cost_sensors"]) and (c := [cost_sensors[j] for j in grid_from]) and (all_stats := await recorder.async_add_executor_job(_compile_statistics, self.hass, now)):
-                            self.cost_total[self.now] = sum(map(lambda i: i["stat"]["sum"], _get_statistics_for_entity(all_stats, c)))
                 try:
-                    if (battery_ids := [j.entity_id for j in battery_entities] + self.config_battery_entity_ids) and (stats := await recorder.async_add_executor_job(_get_significant_states_with_session, self.hass, self.now, battery_ids)):
+                    if not self.consumption or next(iter(self.consumption.values())) is None or ((last_hour := common.dt_hour(self.now) - TIME_HOUR) and last_hour in self.today_consumption and self.today_consumption[last_hour] is None):
+                        query_str = generate_query_string(
+                            recorder.dialect_name == SupportedDialect.SQLITE,
+                            common.joinify(*(grid_from + production_from + battery_from)),
+                            common.joinify(*(grid_to + battery_to)),
+                            common.joinify(*production_from),
+                            common.joinify(*grid_from),
+                            common.joinify(*grid_to),
+                            common.joinify(*grid.get("cost", [])),
+                            common.joinify(*grid.get("compensation", [])),
+                            common.joinify(*self.config_exclude_entity_ids),
+                            f"{o[:3]}:{o[3:]}" if (o := local.strftime('%z')) else "+00:00",
+                            30,
+                            today.weekday(),
+                            (today + TIME_DAY).weekday()
+                        )
+                        self.imported.clear()
+                        self.exported.clear()
+                        self.cost.clear()
+                        async for k, v in self._execute(query_str):
+                            _LOGGER.debug(f"Query result {k}: {v}")
+                            self.consumption[k] = c if (c := v.get("mean")) is not None else self.consumption.get(k - TIME_DAY)
+                            self.consumption_max[k] = c if (c := v.get("maximum")) is not None else self.consumption_max.get(k - TIME_DAY)
+                            self.today_consumption[k] = v.get("consumption")
+                            self.production[k] = v.get("production")
+                            self.imported[k] = v.get("imported")
+                            self.exported[k] = v.get("exported")
+                            self.cost[k] = v.get("cost")
+                        if (cost_sum := sum(filter(None, self.cost.values()))) > 0 and (imported_sum := sum(filter(None, self.imported.values()))) > 0:
+                            self.cost_today = cost_sum
+                            self.cost_rate_today = cost_sum / imported_sum
+                        else:
+                            self.cost_today = None
+                            self.cost_rate_today = None
+                        if not self.now in self.cost_total:
+                            self.cost_total.clear()
+                            if (cost_sensors := self.hass.data["energy"]["cost_sensors"]) and (c := [cost_sensors[j] for j in grid_from]) and (all_stats := await recorder.async_add_executor_job(_compile_statistics, self.hass, now)):
+                                self.cost_total[self.now] = sum(map(lambda i: i["stat"]["sum"], _get_statistics_for_entity(all_stats, c)))
+                        if battery_ids:
+                            self.battery_max = float(await self._execute_simple(generate_query_string_simple(recorder.dialect_name == SupportedDialect.SQLITE, common.joinify(*battery_ids), 30)))
+                except Exception as e:
+                    _LOGGER.debug(f"Consumption statistics error: {common.strepr(e)}")
+                try:
+                    if battery_ids and (stats := await recorder.async_add_executor_job(_get_significant_states_with_session, self.hass, self.now, battery_ids)):
                         self.battery = sum(map(lambda i: float(stats[i][-1]["s"]), stats)) / len(stats)
                 except Exception as e:
                     _LOGGER.debug(f"Last battery state error: {common.strepr(e)}")
@@ -377,15 +394,15 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                         "rate": [(float(self._data.rates_full[k]), 0) for k in keys if k >= self.now],
                         "production": [self.forecast[k] for k in keys if k >= self.now],
                         "consumption": [(self.consumption_max.get(self.now) or 0.2) * 1.2] + [(self.consumption.get(k) or 0.2) * 1.2 for k in keys if k > self.now],
-                        "constraints": {"soc": self.battery / 100, "charge_power": self.number_charge_power / 4, "discharge_power": self.number_discharge_power / 4, "soc_min": self.number_soc_min / 100, "soc_max": self.number_soc_max / 100, "capacity": self.config_capacity, "amortization": self.config_amortization}
+                        "constraints": {"soc": self.battery / 100, "charge_power": self.number_charge_power / 4, "discharge_power": self.number_discharge_power / 4, "soc_min": self.number_soc_min / 100, "soc_max": (self.number_soc_max if self.battery_max > 98 else 100) / 100, "capacity": self.config_capacity, "amortization": self.config_amortization}
                     }
                     if (r := await common.pg(self._session, URL, json = json, headers = { "X-API-Key": self.config_key })) is not None:
                         _LOGGER.debug(f"Optimization of {json}: {r}")
                         self.predicted_cost = float(r[0][1])
                         self.predicted_amortization = float(r[0][3])
                         self.optimization = r[1]
-                except Exception:
-                    _LOGGER.exception(f"Optimization failed: {json}")
+                except Exception as e:
+                    _LOGGER.exception(f"Optimization failed: {common.strepr(e)} ({json})")
 
     async def _async_update_data(self):
 

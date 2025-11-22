@@ -4,7 +4,7 @@
       "user": {
         "title": "Configuration",
         "data": {
-          "area": "Distribution area (CEZ, EG.D, PRE)",
+          "area": "Distribution area (CEZ, EGD, PRE)",
           "rate": "Distribution rate (D25d, D57d, ..)",
           "tariff": "Tariff (AKU8V6, EVV1, ..)",
           "spot_hourly": "Hourly electricity market",
@@ -28,7 +28,7 @@
       "init": {
         "title": "Configuration",
         "data": {
-          "area": "Distribution area (CEZ, EG.D, PRE)",
+          "area": "Distribution area (CEZ, EGD, PRE)",
           "rate": "Distribution rate (D25d, D57d, ..)",
           "tariff": "Tariff (AKU8V6, EVV1, ..)",
           "spot_hourly": "Hourly electricity market",

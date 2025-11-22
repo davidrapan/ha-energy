@@ -4,7 +4,7 @@
       "user": {
         "title": "Konfigurace",
         "data": {
-          "area": "Distribuční území (CEZ, EG.D, PRE)",
+          "area": "Distribuční území (CEZ, EGD, PRE)",
           "rate": "Distribuční sazba (D25d, D57d, ..)",
           "tariff": "Tarif (AKU8V6, EVV1, ..)",
           "spot_hourly": "Hodinový trh s elektřinou",
@@ -28,7 +28,7 @@
       "init": {
         "title": "Konfigurace",
         "data": {
-          "area": "Distribuční území (CEZ, EG.D, PRE)",
+          "area": "Distribuční území (CEZ, EGD, PRE)",
           "rate": "Distribuční sazba (D25d, D57d, ..)",
           "tariff": "Tarif (AKU8V6, EVV1, ..)",
           "spot_hourly": "Hodinový trh s elektřinou",

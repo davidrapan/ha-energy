@@ -1,3 +1,4 @@
+from datetime import time
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
@@ -20,12 +21,12 @@ RATE = {
                 "T2": Decimal("0.20600"),
                 "Name": "AKU8",
                 "Type": {
-                    "V1": ((0, 6), (19, 21)),
-                    "V2": ((0, 5), (18, 20), (23, 24)),
-                    "V3": ((0, 4), (17, 19), (22, 24)),
-                    "V4": ((0, 6), (22, 24)),
-                    "V5": ((1, 6), (18, 21)),
-                    "V6": ((3, 6), (15, 18), (21, 23))
+                    "V1": ((time(hour = 0), time(hour = 6)), (time(hour = 19), time(hour = 21))),
+                    "V2": ((time(hour = 0), time(hour = 5)), (time(hour = 18), time(hour = 20)), (time(hour = 23), time(hour = 23, minute = 59, second = 59))),
+                    "V3": ((time(hour = 0), time(hour = 4)), (time(hour = 17), time(hour = 19)), (time(hour = 22), time(hour = 23, minute = 59, second = 59))),
+                    "V4": ((time(hour = 0), time(hour = 6)), (time(hour = 22), time(hour = 23, minute = 59, second = 59))),
+                    "V5": ((time(hour = 1), time(hour = 6)), (time(hour = 18), time(hour = 21))),
+                    "V6": ((time(hour = 3), time(hour = 6)), (time(hour = 15), time(hour = 18)), (time(hour = 21), time(hour = 23)))
                 }
             },
             "D26d": {
@@ -33,12 +34,12 @@ RATE = {
                 "T2": Decimal("0.20600"),
                 "Name": "AKU8",
                 "Type": {
-                    "V1": ((0, 6), (19, 21)),
-                    "V2": ((0, 5), (18, 20), (23, 24)),
-                    "V3": ((0, 4), (17, 19), (22, 24)),
-                    "V4": ((0, 6), (22, 24)),
-                    "V5": ((1, 6), (18, 21)),
-                    "V6": ((3, 6), (15, 18), (21, 23))
+                    "V1": ((time(hour = 0), time(hour = 6)), (time(hour = 19), time(hour = 21))),
+                    "V2": ((time(hour = 0), time(hour = 5)), (time(hour = 18), time(hour = 20)), (time(hour = 23), time(hour = 23, minute = 59, second = 59))),
+                    "V3": ((time(hour = 0), time(hour = 4)), (time(hour = 17), time(hour = 19)), (time(hour = 22), time(hour = 23, minute = 59, second = 59))),
+                    "V4": ((time(hour = 0), time(hour = 6)), (time(hour = 22), time(hour = 23, minute = 59, second = 59))),
+                    "V5": ((time(hour = 1), time(hour = 6)), (time(hour = 18), time(hour = 21))),
+                    "V6": ((time(hour = 3), time(hour = 6)), (time(hour = 15), time(hour = 18)), (time(hour = 21), time(hour = 23)))
                 }
             },
             "D27d": {
@@ -46,7 +47,7 @@ RATE = {
                 "T2": Decimal("0.20600"),
                 "Name": "EMO",
                 "Type": {
-                    "V1": ((2, 6), (20, 24))
+                    "V1": ((time(hour = 2), time(hour = 6)), (time(hour = 20), time(hour = 23, minute = 59, second = 59)))
                 }
             },
             "D35d": {
@@ -54,7 +55,7 @@ RATE = {
                 "T2": Decimal("0.20600"),
                 "Name": "AKU16",
                 "Type": {
-                    "V1": ((0, 8), (13, 16), (19, 24))
+                    "V1": ((time(hour = 0), time(hour = 8)), (time(hour = 13), time(hour = 16)), (time(hour = 19), time(hour = 23, minute = 59, second = 59)))
                 }
             },
             "D45d": {
@@ -62,10 +63,10 @@ RATE = {
                 "T2": Decimal("0.20600"),
                 "Name": "PT",
                 "Type": {
-                    "V1": ((0, 9), (10, 11), (12, 13), (14, 16), (17, 24)),
-                    "V2": ((0, 6), (7, 9), (10, 13), (14, 16), (17, 24)),
-                    "V3": ((0, 8), (9, 12), (13, 15), (16, 19), (20, 24)),
-                    "V4": ((0, 10), (11, 12), (13, 14), (15, 17), (18, 24))
+                    "V1": ((time(hour = 0), time(hour = 9)), (time(hour = 10), time(hour = 11)), (time(hour = 12), time(hour = 13)), (time(hour = 14), time(hour = 16)), (time(hour = 17), time(hour = 23, minute = 59, second = 59))),
+                    "V2": ((time(hour = 0), time(hour = 6)), (time(hour = 7), time(hour = 9)), (time(hour = 10), time(hour = 13)), (time(hour = 14), time(hour = 16)), (time(hour = 17), time(hour = 23, minute = 59, second = 59))),
+                    "V3": ((time(hour = 0), time(hour = 8)), (time(hour = 9), time(hour = 12)), (time(hour = 13), time(hour = 15)), (time(hour = 16), time(hour = 19)), (time(hour = 20), time(hour = 23, minute = 59, second = 59))),
+                    "V4": ((time(hour = 0), time(hour = 10)), (time(hour = 11), time(hour = 12)), (time(hour = 13), time(hour = 14)), (time(hour = 15), time(hour = 17)), (time(hour = 18), time(hour = 23, minute = 59, second = 59)))
                 }
             },
             "D56d": {
@@ -73,7 +74,7 @@ RATE = {
                 "T2": Decimal("0.20600"),
                 "Name": "TČ",
                 "Type": {
-                    "V1": ((0, 9), (10, 12), (14, 24))
+                    "V1": ((time(hour = 0), time(hour = 9)), (time(hour = 10), time(hour = 12)), (time(hour = 14), time(hour = 23, minute = 59, second = 59)))
                 }
             },
             "D57d": {
@@ -81,9 +82,9 @@ RATE = {
                 "T2": Decimal("0.20600"),
                 "Name": "EV",
                 "Type": {
-                    "V1": ((0, 6), (7, 9), (10, 13), (14, 16), (17, 24)),
-                    "V2": ((0, 8), (9, 12), (13, 15), (16, 19), (20, 24)),
-                    "V3": ((0, 10), (11, 12), (13, 14), (15, 17), (18, 24))
+                    "V1": ((time(hour = 0), time(hour = 6)), (time(hour = 7), time(hour = 9)), (time(hour = 10), time(hour = 13)), (time(hour = 14), time(hour = 16)), (time(hour = 17), time(hour = 23, minute = 59, second = 59))),
+                    "V2": ((time(hour = 0), time(hour = 8)), (time(hour = 9), time(hour = 12)), (time(hour = 13), time(hour = 15)), (time(hour = 16), time(hour = 19)), (time(hour = 20), time(hour = 23, minute = 59, second = 59))),
+                    "V3": ((time(hour = 0), time(hour = 10)), (time(hour = 11), time(hour = 12)), (time(hour = 13), time(hour = 14)), (time(hour = 15), time(hour = 17)), (time(hour = 18), time(hour = 23, minute = 59, second = 59)))
                 }
             },
             "D61d": {
@@ -91,11 +92,11 @@ RATE = {
                 "T2": Decimal("0.20600"),
                 "Name": "VIK",
                 "Type": {
-                    "V1": [(), (), (), (), ((12, 24)), ((0, 24)), ((0, 22))]
+                    "V1": ((), (), (), (), ((time(hour = 12), time(hour = 23, minute = 59, second = 59))), ((time(hour = 0), time(hour = 23, minute = 59, second = 59))), ((time(hour = 0), time(hour = 22))))
                 }
             }
         },
-        "EG.D": {
+        "EGD": {
             "D01d": {
                 "T1": Decimal("2.69479")
             },
@@ -195,14 +196,17 @@ TARIFF = {
     "EVV1": ((0, 6), (7, 9), (10, 13), (14, 16), (17, 24)),
     "EVV2": ((0, 8), (9, 12), (13, 15), (16, 19), (20, 24)),
     "EVV3": ((0, 10), (11, 12), (13, 14), (15, 17), (18, 24)),
-    "VIKV1": [(), (), (), (), ((12, 24)), ((0, 24)), ((0, 22))],
-    "CHLV1": ((3, 23)),
-    "CHLV2": ((0, 4), (6, 22)),
-    "CHLV3": ((0, 4.5), (8.5, 24)),
-    "CHLV4": ((0, 14), (18, 24)),
-    "ZAV1": [((0, 6), (10, 24)), ((0, 6), (10, 24)), ((0, 6), (10, 24)), ((0, 6), (10, 24)), ((0, 6), (10, 24)), ((0, 24)), ((0, 24))],
-    "ZAV2": [((0, 3), (7, 24)), ((0, 3), (7, 24)), ((0, 3), (7, 24)), ((0, 3), (7, 24)), ((0, 3), (7, 24)), ((0, 24)), ((0, 24))],
-    "VYRV1": ((0, 6), (10, 16), (20, 24)),
-    "VYRV2": ((0, 7), (15, 24)),
-    "VYRV3": ((0, 7), (10, 18), (23, 24))
+    "VIKV1": ((), (), (), (), ((12, 24)), ((0, 24)), ((0, 22))),
+    "CHLV1": ((time(hour = 3), time(hour = 23))),
+    "CHLV2": ((time(hour = 0), time(hour = 4)), (time(hour = 6), time(hour = 22))),
+    "CHLV3": ((time(hour = 0), time(hour = 4, minute = 30)), (time(hour = 8, minute = 30), time(hour = 23, minute = 59, second = 59))),
+    "CHLV4": ((time(hour = 0), time(hour = 14)), (time(hour = 18), time(hour = 23, minute = 59, second = 59))),
+    "ZAV1": (((time(hour = 0), time(hour = 6)), (time(hour = 10), time(hour = 23, minute = 59, second = 59))), ((time(hour = 0), time(hour = 6)), (time(hour = 10), time(hour = 23, minute = 59, second = 59))), ((time(hour = 0), time(hour = 6)), (time(hour = 10), time(hour = 23, minute = 59, second = 59))), ((time(hour = 0), time(hour = 6)), (time(hour = 10), time(hour = 23, minute = 59, second = 59))), ((time(hour = 0), time(hour = 6)), (time(hour = 10), time(hour = 23, minute = 59, second = 59))), ((time(hour = 0), time(hour = 23, minute = 59, second = 59))), ((time(hour = 0), time(hour = 23, minute = 59, second = 59)))),
+    "ZAV2": (((time(hour = 0), time(hour = 3)), (time(hour = 7), time(hour = 23, minute = 59, second = 59))), ((time(hour = 0), time(hour = 3)), (time(hour = 7), time(hour = 23, minute = 59, second = 59))), ((time(hour = 0), time(hour = 3)), (time(hour = 7), time(hour = 23, minute = 59, second = 59))), ((time(hour = 0), time(hour = 3)), (time(hour = 7), time(hour = 23, minute = 59, second = 59))), ((time(hour = 0), time(hour = 3)), (time(hour = 7), time(hour = 23, minute = 59, second = 59))), ((time(hour = 0), time(hour = 23, minute = 59, second = 59))), ((time(hour = 0), time(hour = 23, minute = 59, second = 59)))),
+    "VYRV1": ((time(hour = 0), time(hour = 6)), (time(hour = 10), time(hour = 16)), (time(hour = 20), time(hour = 23, minute = 59, second = 59))),
+    "VYRV2": ((time(hour = 0), time(hour = 7)), (time(hour = 15), time(hour = 23, minute = 59, second = 59))),
+    "VYRV3": ((time(hour = 0), time(hour = 7)), (time(hour = 10), time(hour = 18)), (time(hour = 23), time(hour = 23, minute = 59, second = 59)))
 }
+
+URL_CEZ = "https://www.cezdistribuce.cz/webpublic/distHdo/adam/containers/{0}?&code={1}"
+CEZ_TUPLES = (("CAS_ZAP_1", "CAS_VYP_1"), ("CAS_ZAP_2", "CAS_VYP_2"), ("CAS_ZAP_3", "CAS_VYP_3"), ("CAS_ZAP_4", "CAS_VYP_4"), ("CAS_ZAP_5", "CAS_VYP_5"), ("CAS_ZAP_6", "CAS_VYP_6"), ("CAS_ZAP_7", "CAS_VYP_7"), ("CAS_ZAP_8", "CAS_VYP_8"), ("CAS_ZAP_9", "CAS_VYP_9"), ("CAS_ZAP_10", "CAS_VYP_10"))

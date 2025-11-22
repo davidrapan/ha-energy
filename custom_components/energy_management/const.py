@@ -85,7 +85,7 @@ GROUP BY
 SQL_QUERY_MYSQL_PARAMS = {
     "a_s_dt": ", FROM_UNIXTIME(t.start_ts) AS start_dt",
     "datetime": "FROM_UNIXTIME(t.start_ts)",
-    "date_sub": "DATE_SUB(CURDATE(), INTERVAL {month} MONTH)",
+    "date_sub": "DATE_SUB(CURDATE(), INTERVAL {days} DAY)",
     "hour_of_day": "HOUR(start_dt)",
     "day_of_week": "WEEKDAY(start_dt)",
 }
@@ -93,7 +93,28 @@ SQL_QUERY_MYSQL_PARAMS = {
 SQL_QUERY_SQLITE_PARAMS = {
     "a_s_dt": "",
     "datetime": "strftime('%Y-%m-%d %H:%M:%S', t.start_ts, 'unixepoch', '{offset}')",
-    "date_sub": "strftime('%s', 'now', '-{month} month', '{offset}')",
+    "date_sub": "strftime('%s', 'now', '-{days} day', '{offset}')",
     "hour_of_day": "CAST(strftime('%H', start_ts, 'unixepoch', '{offset}') AS INTEGER)",
     "day_of_week": "CAST(strftime('%u', start_ts, 'unixepoch', '{offset}') AS INTEGER) - 1",
+}
+
+SQL_QUERY_BATTERY = """
+SELECT
+    MAX(t.state)
+FROM
+    states t
+JOIN
+    states_meta sm ON t.metadata_id = sm.metadata_id
+WHERE
+    t.last_changed_ts IS NOT NULL AND {datetime} >= {date_sub} AND sm.entity_id IN ({battery_ids})
+""".strip()
+
+SQL_QUERY_BATTERY_MYSQL_PARAMS = {
+    "datetime": "FROM_UNIXTIME(t.last_changed_ts)",
+    "date_sub": "DATE_SUB(CURDATE(), INTERVAL {days} DAY)",
+}
+
+SQL_QUERY_BATTERY_SQLITE_PARAMS = {
+    "datetime": "strftime('%Y-%m-%d %H:%M:%S', t.start_ts, 'unixepoch', '{offset}')",
+    "date_sub": "strftime('%s', 'now', '-{days} day', '{offset}')",
 }

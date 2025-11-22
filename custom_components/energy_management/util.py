@@ -12,6 +12,14 @@ from .common import *
 _SQL_LAMBDA_CACHE: LRUCache = LRUCache(1000)
 
 @cache
+def generate_query_string_simple(
+    is_sqlite: bool,
+    battery_ids: str,
+    days: int,
+) -> str:
+    return SQL_QUERY_BATTERY.format(**(SQL_QUERY_BATTERY_MYSQL_PARAMS if not is_sqlite else SQL_QUERY_BATTERY_SQLITE_PARAMS), battery_ids = battery_ids).format(days = days)
+
+@cache
 def generate_query_string(
     is_sqlite: bool,
     from_ids: str,
@@ -23,7 +31,7 @@ def generate_query_string(
     compensation_ids: str,
     exclude_ids: str,
     offset: str,
-    month: int,
+    days: int,
     weekday: int,
     next_weekday: int
 ) -> str:
@@ -39,7 +47,7 @@ def generate_query_string(
         exclude_ids = exclude_ids
     ).format(
         offset = offset,
-        month = month,
+        days = days,
         slot = weekslot(weekday), next_slot = weekslot(next_weekday) # slot = weekday, next_slot = next_weekday
     )
 

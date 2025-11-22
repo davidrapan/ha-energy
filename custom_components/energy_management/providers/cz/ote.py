@@ -51,4 +51,4 @@ async def post(s: ClientSession, prep: Callable[[datetime, Decimal], tuple[Decim
     for item in root.findall(f".//{{{_QUERY_SCHEMA}}}Item"):
         indh, indm = (x // 4, (x % 4) * 15) if (x := (int(h.text) - 1) if (h := item.find(f"{{{_QUERY_SCHEMA}}}PeriodIndex")) is not None and h.text else None) is not None else (None, None)
         idth = datetime.combine(date.fromisoformat(d.text) if (d := item.find(f"{{{_QUERY_SCHEMA}}}Date")) is not None and d.text else None, time(0), tzinfo = TIMEZONE).astimezone(UTC) + timedelta(hours = indh, minutes = indm)
-        yield idth, *prep(idth.astimezone(TIMEZONE), ((Decimal(p.text) * crate) / Decimal(1000)) if (p := item.find(f"{{{_QUERY_SCHEMA}}}{pmod}Price")) is not None and p.text else None)
+        yield idth, *await prep(idth.astimezone(TIMEZONE), ((Decimal(p.text) * crate) / Decimal(1000)) if (p := item.find(f"{{{_QUERY_SCHEMA}}}{pmod}Price")) is not None and p.text else None)
