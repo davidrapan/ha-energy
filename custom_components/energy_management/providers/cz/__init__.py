@@ -34,13 +34,13 @@ def _area_normalized(area: str):
 def _region_normalized(region: str):
     region = region.lower()
     match region:
-        case "west":
+        case "west" | "západ":
             region = "zapad"
         case "north":
             region = "sever"
-        case "center":
+        case "center" | "střed":
             region = "stred"
-        case "east":
+        case "east" | "východ":
             region = "vychod"
         case "moravia":
             region = "morava"
