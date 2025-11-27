@@ -49,16 +49,20 @@ def _region_normalized(region: str):
             return x
 
 @acache
-async def _get_intervals(s: ClientSession, tariff: str, _: date):
-    region, code = tariff.split(";")
-    data = (await pg(s, URL_CEZ.format(_region_normalized(region), code.upper())))["data"]
-    resp = tuple(tuple((time(hour = int(o[0]), minute = int(o[1])), time(hour = int(f[0]), minute = int(f[1]))) for on, off in CEZ_TUPLES if d[on] and (o := d[on].split(":")) and (f := d[off].split(":"))) for d in data)
-    if _all_same(resp):
-        return resp[0]
-    if len(resp) == 2:
-        w, e = (resp[1], resp[0]) if data[0]["PLATNOST"] == "So - Ne" else (resp[0], resp[1])
-        return (w, w, w, w, w, e, e)
-    return resp
+async def _get_intervals(s: ClientSession, area: str, tariff: str, _: date):
+    match area:
+        case "CEZ" if ';' in tariff:
+            region, code = tariff.split(";")
+            data = (await pg(s, URL_CEZ.format(_region_normalized(region), code.upper())))["data"]
+            resp = tuple(tuple((time(hour = int(o[0]), minute = int(o[1])), time(hour = int(f[0]), minute = int(f[1]))) for on, off in CEZ_TUPLES if d[on] and (o := d[on].split(":")) and (f := d[off].split(":"))) for d in data)
+            if _all_same(resp):
+                return resp[0]
+            if len(resp) == 2:
+                w, e = (resp[1], resp[0]) if data[0]["PLATNOST"] == "So - Ne" else (resp[0], resp[1])
+                return (w, w, w, w, w, e, e)
+            return resp
+        case _:
+            return ((), (), (), (), (), (), ())
 
 @cache
 def _get_tariff(tariff: tuple[tuple[time, time]] | tuple[tuple[tuple[time, time]]], weekday: int, t: time):
@@ -69,7 +73,7 @@ def _get_tariff(tariff: tuple[tuple[time, time]] | tuple[tuple[tuple[time, time]
 
 @acache
 async def _get_distribution(s: ClientSession, area: str, rate: str, tariff: str, dt: datetime) -> Decimal:
-    return RATE[dt.year][""] + RATE[dt.year][area][rate][_get_tariff(RATE[dt.year][area][rate]["Type"][tariff[-2:]] if "Type" in RATE[dt.year][area][rate] and tariff in TARIFF and RATE[dt.year][area][rate]["Name"] == tariff[:-2] else TARIFF[tariff] if tariff in TARIFF else await _get_intervals(s, tariff, dt.date()), dt.weekday(), dt.time())]
+    return RATE[dt.year][""] + RATE[dt.year][area][rate][_get_tariff(RATE[dt.year][area][rate]["Type"][tariff[-2:]] if "Type" in RATE[dt.year][area][rate] and tariff in TARIFF and RATE[dt.year][area][rate]["Name"] == tariff[:-2] else TARIFF[tariff] if tariff in TARIFF else await _get_intervals(s, area, tariff, dt.date()), dt.weekday(), dt.time())]
 
 @cache
 def _get_distribution_function(s: ClientSession, area: str, rate: str, tariff: str):
