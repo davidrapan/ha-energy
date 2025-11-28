@@ -8,7 +8,7 @@
 [![Wiki](https://img.shields.io/badge/wiki-8A2BE2)](https://github.com/davidrapan/ha-energy/wiki)
 
 > [!IMPORTANT]  
-> For [OTE, a.s.](https://www.ote-cr.cz/en/) and [ČEZ Distribuce, a. s.](https://www.cezdistribuce.cz/)
+> For [OTE, a.s.](https://www.ote-cr.cz/en/) and [ČEZ Distribuce, a. s.](https://www.cezdistribuce.cz/) + [EG.D, s.r.o.](https://www.egd.cz/)
 
 ## 🔌 Installation
 
