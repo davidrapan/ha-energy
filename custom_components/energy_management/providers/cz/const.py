@@ -210,3 +210,6 @@ TARIFF = {
 
 URL_CEZ = "https://www.cezdistribuce.cz/webpublic/distHdo/adam/containers/{0}?&code={1}"
 CEZ_TUPLES = (("CAS_ZAP_1", "CAS_VYP_1"), ("CAS_ZAP_2", "CAS_VYP_2"), ("CAS_ZAP_3", "CAS_VYP_3"), ("CAS_ZAP_4", "CAS_VYP_4"), ("CAS_ZAP_5", "CAS_VYP_5"), ("CAS_ZAP_6", "CAS_VYP_6"), ("CAS_ZAP_7", "CAS_VYP_7"), ("CAS_ZAP_8", "CAS_VYP_8"), ("CAS_ZAP_9", "CAS_VYP_9"), ("CAS_ZAP_10", "CAS_VYP_10"))
+
+URL_EGD_REGION = "https://hdo.distribuce24.cz/region"
+URL_EGD = "https://hdo.distribuce24.cz/casy"
