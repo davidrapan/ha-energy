@@ -1,13 +1,13 @@
 import asyncio
 
-from typing import Callable
 from decimal import Decimal
 from aiohttp import ClientSession
 from xml.etree import ElementTree
+from typing import Callable, Coroutine
 from collections.abc import AsyncGenerator
 from datetime import datetime, date, time, timedelta
 
-from homeassistant.util.dt import UTC
+from homeassistant.util.dt import UTC, utcnow
 
 from ...const import TIME_DAY
 from ...common import ec, pg, ClientError
@@ -31,9 +31,9 @@ _QUERY_TEMPLATE = f"""
 </soapenv:Envelope>
 """.strip()
 
-async def post(s: ClientSession, prep: Callable[[datetime, Decimal], tuple[Decimal, Decimal, Decimal]], pmod: str, currency: str, dt: datetime) -> AsyncGenerator[tuple[datetime, Decimal, Decimal], None]:
+async def post(s: ClientSession, prep: Callable[[datetime, Decimal | tuple[Decimal, Decimal]], Coroutine[None, None, tuple[Decimal, Decimal, Decimal]]], pmod: str, currency: str, **kwargs: datetime | Decimal) -> AsyncGenerator[tuple[datetime, Decimal, Decimal], None]:
     try:
-        l = dt.astimezone(TIMEZONE).date()
+        l = (kwargs.get("dt", utcnow())).astimezone(TIMEZONE).date()
         ote_resp, cnb_resp = await asyncio.gather(pg(s, _URL_OTE, _QUERY_TEMPLATE.format(start = (l - TIME_DAY).isoformat(), end = (l + TIME_DAY).isoformat())), pg(s, _URL_CNB) if currency in ("CZK", "Kč") else ec())
         root = ElementTree.fromstring(ote_resp)
     except ClientError as e:

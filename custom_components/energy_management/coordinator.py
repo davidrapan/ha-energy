@@ -16,8 +16,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import create_async_engine, async_scoped_session, async_sessionmaker, AsyncSession
 
 from homeassistant.util.dt import utcnow
-from homeassistant.core import HomeAssistant, callback, CALLBACK_TYPE
-from homeassistant.const import ATTR_CONFIGURATION_URL, ATTR_IDENTIFIERS, ATTR_MANUFACTURER, ATTR_MODEL, ATTR_NAME, ATTR_SW_VERSION
+from homeassistant.core import Event, HomeAssistant, callback, CALLBACK_TYPE
+from homeassistant.const import ATTR_CONFIGURATION_URL, ATTR_IDENTIFIERS, ATTR_MANUFACTURER, ATTR_MODEL, ATTR_NAME, ATTR_SW_VERSION, EVENT_HOMEASSISTANT_STARTED, STATE_UNKNOWN
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import entity_registry
 from homeassistant.helpers import aiohttp_client
@@ -220,6 +220,8 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
         self.config_rate = self.config_entry.options.get("rate", "D57d")
         self.config_tariff = self.config_entry.options.get("tariff", "EVV1")
         self.config_spot_hourly = self.config_entry.options.get("spot_hourly", False)
+        self.config_fix_t1_id = self.config_entry.options.get("fix_t1_id", None)
+        self.config_fix_t2_id = self.config_entry.options.get("fix_t2_id", None)
         self.config_cost_fee = self.config_entry.options.get("cost_fee", 0.3)
         self.config_compensation_fee = self.config_entry.options.get("compensation_fee", 0.4)
         self.config_capacity = self.config_entry.options.get("capacity", 9.7)
@@ -242,6 +244,14 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
 
     async def init(self):
         await super().async_config_entry_first_refresh()
+
+        if self.config_fix_t1_id and (t1 := self.hass.states.get(self.config_fix_t1_id)) and t1.state == STATE_UNKNOWN:
+            @callback
+            async def _reload(_: Event):
+                await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+
+            self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _reload)
+
         return self
 
     async def async_shutdown(self) -> None:
@@ -254,6 +264,9 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
             self._deferred_refresh = None
         await (await self._maker.connection()).engine.dispose()
 
+    def _get_rates_params(self, dt: datetime) -> dict[str, datetime | Decimal]:
+        return {"dt": dt} | ({"T1": Decimal(t1.state if t1.state != STATE_UNKNOWN else "0")} if self.config_fix_t1_id and (t1 := self.hass.states.get(self.config_fix_t1_id)) else {}) | ({"T2": Decimal(t2.state if t2.state != STATE_UNKNOWN else "0")} if self.config_fix_t2_id and (t2 := self.hass.states.get(self.config_fix_t2_id)) else {})
+
     async def _fetch_data(self):
         async with asyncio.timeout(30):
             tzn = ZoneInfo(self.hass.config.time_zone)
@@ -261,7 +274,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
             self.now = common.dt_block(now)
             local = self.now.astimezone(tzn)
             today = local.date()
-            get_rates, tomorrow_available = get_function(self._session, self.config_area, self.config_rate, self.config_tariff, "" if not self.config_spot_hourly else "Hourly", (self.config_cost_fee, self.config_compensation_fee), self.hass.config.country, self.hass.config.currency)
+            get_rates, tomorrow_available = get_function(self._session, self.config_area, self.config_rate, self.config_tariff, "" if not self.config_spot_hourly else "Hourly", (self.config_cost_fee, self.config_compensation_fee), self.hass.config.country + ("" if not self.config_fix_t1_id else "-fix"), self.hass.config.currency)
             if not self.data or not self.data.tomorrow and tomorrow_available(self.now):
                 yesterday_data: dict[datetime, tuple[Decimal, Decimal, Decimal]] = {}
                 today_data: dict[datetime, tuple[Decimal, Decimal, Decimal]] = {}
@@ -271,7 +284,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                 self.consumption.clear()
                 self.consumption_max.clear()
                 self.today_consumption.clear()
-                async for k, i, o, v in get_rates(self.now):
+                async for k, i, o, v in get_rates(**self._get_rates_params(self.now)):
                     _LOGGER.debug(f"Rate at {k}: {i}, {o}, {v}")
                     l_date = k.astimezone(tzn).date()
                     if l_date == today - TIME_DAY:

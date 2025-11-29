@@ -1,15 +1,18 @@
 from datetime import datetime, time
 from aiohttp import ClientSession
-from functools import lru_cache
+from functools import lru_cache, partial
 from decimal import Decimal
 
 from homeassistant.util.dt import UTC
 
 from ..const import TIME_DAY, PZERO_DECIMAL, RATES_DEFAULT
 from .cz import get_function as get_cz
+from .cz.ote import post as ote_post
+from .cz.fix import post as fix_post
 
 _map = {
-    "CZ": get_cz
+    "CZ": partial(get_cz, ote_post),
+    "CZ-fix": partial(get_cz, fix_post)
 }
 
 async def _default(dt: datetime, **kwargs: list[float]):

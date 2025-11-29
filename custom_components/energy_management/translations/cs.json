@@ -4,10 +4,12 @@
       "user": {
         "title": "Konfigurace",
         "data": {
-          "area": "Distribuční území (CEZ, EGD, PRE)",
-          "rate": "Distribuční sazba (D25d, D57d, ..)",
-          "tariff": "Tarif (AKU8V6, EVV1, ..)",
+          "area": "Distribuční území",
+          "rate": "Distribuční sazba",
+          "tariff": "Tarif",
           "spot_hourly": "Hodinový trh s elektřinou",
+          "fix_t1_id": "Fix T1 entity",
+          "fix_t2_id": "Fix T2 entity",
           "cost_fee": "Poplatek služby obchodu - nákup [CZK/kWh]",
           "compensation_fee": "Poplatek služby obchodu - prodej [CZK/kWh]",
           "capacity": "Kapacita [kWh]",
@@ -17,7 +19,10 @@
           "key": "Klíč"
         },
         "data_description": {
-          "battery_entity_ids": "Vyplnit jen v příapdě potřeby",
+          "tariff": "AKU8V6, EVV1, .. nebo region;HDO_povel",
+          "fix_t1_id": "Vyplnit jen v případě potřeby",
+          "fix_t2_id": "Vyplnit jen v případě potřeby",
+          "battery_entity_ids": "Vyplnit jen v případě potřeby",
           "exclude_entity_ids": "Zadejte entity, které nebudou použity při výpočtu spotřeby"
         }
       }
@@ -28,10 +33,12 @@
       "init": {
         "title": "Konfigurace",
         "data": {
-          "area": "Distribuční území (CEZ, EGD, PRE)",
-          "rate": "Distribuční sazba (D25d, D57d, ..)",
-          "tariff": "Tarif (AKU8V6, EVV1, ..)",
+          "area": "Distribuční území",
+          "rate": "Distribuční sazba",
+          "tariff": "Tarif",
           "spot_hourly": "Hodinový trh s elektřinou",
+          "fix_t1_id": "Fix T1 entity",
+          "fix_t2_id": "Fix T2 entity",
           "cost_fee": "Poplatek služby obchodu - nákup [CZK/kWh]",
           "compensation_fee": "Poplatek služby obchodu - prodej [CZK/kWh]",
           "capacity": "Kapacita [kWh]",
@@ -41,7 +48,10 @@
           "key": "Klíč"
         },
         "data_description": {
-          "battery_entity_ids": "Vyplnit jen v příapdě potřeby",
+          "tariff": "AKU8V6, EVV1, .. nebo region;HDO_povel",
+          "fix_t1_id": "Vyplnit jen v případě potřeby",
+          "fix_t2_id": "Vyplnit jen v případě potřeby",
+          "battery_entity_ids": "Vyplnit jen v případě potřeby",
           "exclude_entity_ids": "Zadejte entity, které nebudou použity při výpočtu spotřeby"
         }
       }
@@ -49,7 +59,7 @@
   },
   "system_health": {
     "info": {
-      "can_reach_server": "Reach ranware.com"
+      "can_reach_server": "ranware.com je dostupný"
     }
   }
 }
