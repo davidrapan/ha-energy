@@ -25,15 +25,15 @@ def _all_same(values):
 
 @cache
 def _area_normalized(area: str):
-    area = area.upper()
+    area = area.lower()
     match area:
-        case "ČEZ":
-            return "CEZ"
-        case "EG.D":
-            return "EGD"
-        case "PREDISTRIBUCE":
-            return "PRE"
-    return area   
+        case "čez":
+            return "cez"
+        case "eg.d":
+            return "egd"
+        case "predistribuce":
+            return "pre"
+    return area
 
 @cache
 def _region_normalized(region: str):
@@ -52,25 +52,26 @@ def _region_normalized(region: str):
     for x in ["zapad", "sever", "stred", "vychod", "morava"]:
         if x in region:
             return x
+    return region
 
 @acache
 async def _get_intervals(s: ClientSession, area: str, rate: str, tariff: str, _: date):
     try:
         match area:
-            case "CEZ" if ';' in tariff:
+            case "cez" if ';' in tariff:
                 region, code = tariff.split(";")
                 region = _region_normalized(region)
                 code = code.upper()
                 data = (await pg(s, URL_CEZ.format(region, code)))["data"]
                 resp = tuple(tuple((time(hour = int(o[0]), minute = int(o[1])), time(hour = int(f[0]), minute = int(f[1]))) for on, off in CEZ_TUPLES if d[on] and (o := d[on].split(":")) and (f := d[off].split(":"))) for d in data)
-                _LOGGER.debug(f"CEZ intervals for '{region}' w/ code '{code}': {resp}")
+                _LOGGER.debug(f"Tariff intervals for '{region}' w/ code '{code}': {resp}")
                 if _all_same(resp):
                     return resp[0]
                 if len(resp) == 2:
                     w, e = (resp[1], resp[0]) if data[0]["PLATNOST"] == "So - Ne" else (resp[0], resp[1])
                     return (w, w, w, w, w, e, e)
                 return resp
-            case "EGD":
+            case "egd":
                 region, code = tariff.split(';') if ';' in tariff else ("", tariff)
                 region = region.upper()
                 code = code.upper()
@@ -78,7 +79,7 @@ async def _get_intervals(s: ClientSession, area: str, rate: str, tariff: str, _:
                     region = [x for x in await pg(s, URL_EGD_REGION) if x["PSC"] == region][0]["Region"]
                 code_a, code_b, code_dp = (regex.group(1), regex.group(2), regex.group(4)) if (regex := re.search("A(\\d+)B(\\d+)(DP|P)(\\d+)", code, re.IGNORECASE)) and len(regex.groups()) > 3 else (code, code, code)
                 resp = tuple(tuple((time(hour = int(o[0]), minute = int(o[1])), time(hour = int(f[0]), minute = int(f[1]))) for c in s["casy"] if (o := c["od"].split(":")) and (f := c["do"].split(":"))) for s in [r for r in [d for d in await pg(s, URL_EGD) if (not region and d["kodHdo_A"] == code_a) or (d["region"] == region and d['A'] == code_a and d['B'] == code_b and (d["DP"] == code_dp or d["DP"] == '0' + code_dp))][0]["sazby"] if rate in r["sazba"]][0]["dny"])
-                _LOGGER.debug(f"EGD intervals for '{region}' w/ code '{code}': {resp}")
+                _LOGGER.debug(f"Tariff intervals for '{region}' w/ code '{code}': {resp}")
                 if _all_same(resp):
                     return resp[0]
                 return resp

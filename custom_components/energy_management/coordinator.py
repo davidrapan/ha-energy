@@ -216,7 +216,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
     async def _async_setup(self) -> None:
         await super()._async_setup()
         self._session = aiohttp_client.async_get_clientsession(self.hass)
-        self.config_area = self.config_entry.options.get("area", "CEZ")
+        self.config_area = self.config_entry.options.get("area", "cez")
         self.config_rate = self.config_entry.options.get("rate", "D57d")
         self.config_tariff = self.config_entry.options.get("tariff", "EVV1")
         self.config_spot_hourly = self.config_entry.options.get("spot_hourly", False)
