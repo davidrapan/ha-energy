@@ -57,6 +57,15 @@
       }
     }
   },
+  "selector": {
+    "area": {
+      "options": {
+        "cez": "ČEZ Distribuce, a.s.",
+        "egd": "EG.D, s.r.o.",
+        "pre": "PREdistribuce, a. s."
+      } 
+    }
+  },
   "system_health": {
     "info": {
       "can_reach_server": "ranware.com je dostupný"

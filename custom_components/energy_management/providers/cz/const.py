@@ -9,7 +9,7 @@ TIMEZONE = ZoneInfo("Europe/Prague")
 RATE = {
     2025: {
         "": Decimal("0.49500") + Decimal("0.17092") + Decimal("0.02830"),
-        "CEZ": {
+        "cez": {
             "D01d": {
                 "T1": Decimal("2.80318")
             },
@@ -96,7 +96,7 @@ RATE = {
                 }
             }
         },
-        "EGD": {
+        "egd": {
             "D01d": {
                 "T1": Decimal("2.69479")
             },
@@ -136,7 +136,7 @@ RATE = {
                 "T2": Decimal("0.22264")
             }
         },
-        "PRE": {
+        "pre": {
             "D01d": {
                 "T1": Decimal("1.82339")
             },
