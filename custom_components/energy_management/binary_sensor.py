@@ -17,6 +17,7 @@ async def async_setup_entry(_: HomeAssistant, config_entry: ConfigEntry[Coordina
 
     async_add_entities([
         BatteryChargeFromGridSensor(config_entry.runtime_data),
+        BatteryDischargeToGridSensor(config_entry.runtime_data),
         CostRateBelowMeanElectricitySensor(config_entry.runtime_data)
     ])
 
@@ -38,6 +39,20 @@ class BatteryChargeFromGridSensor(EnergyManagementBinarySensorEntity):
         self._attr_extra_state_attributes = {k.astimezone(self.coordinator.data.zone_info).isoformat(): v[3] for k, v in zip([i for i in self.coordinator.consumption.keys() if i > self.coordinator.data.now], o[1:])}
         #self._attr_is_on = o[self.now_index(self.coordinator.data.zone_info)][3]
         self._attr_is_on = o[0][3] if self.coordinator.now == self.coordinator.data.now else o[1][3]
+
+class BatteryDischargeToGridSensor(EnergyManagementBinarySensorEntity):
+    _attr_icon = "mdi:power-plug-battery-outline"
+
+    def __init__(self, coordinator: Coordinator) -> None:
+        self._attr_name = "Battery - discharge to Grid"
+        super().__init__(coordinator)
+
+    def update(self):
+        super().update()
+        if not (o := self.coordinator.optimization):
+            return
+        self._attr_extra_state_attributes = {k.astimezone(self.coordinator.data.zone_info).isoformat(): v[4] for k, v in zip([i for i in self.coordinator.consumption.keys() if i > self.coordinator.data.now], o[1:])}
+        self._attr_is_on = o[0][4] if self.coordinator.now == self.coordinator.data.now else o[1][4]
 
 class CostRateBelowMeanElectricitySensor(EnergyManagementBinarySensorEntity):
     _attr_icon = "mdi:cash-clock"
