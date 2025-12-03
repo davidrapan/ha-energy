@@ -18,6 +18,7 @@ async def async_setup_entry(_: HomeAssistant, config_entry: ConfigEntry[Coordina
     async_add_entities([
         BatteryChargeFromGridSensor(config_entry.runtime_data),
         BatteryDischargeToGridSensor(config_entry.runtime_data),
+        SuppressExportSensor(config_entry.runtime_data),
         CostRateBelowMeanElectricitySensor(config_entry.runtime_data)
     ])
 
@@ -53,6 +54,20 @@ class BatteryDischargeToGridSensor(EnergyManagementBinarySensorEntity):
             return
         self._attr_extra_state_attributes = {k.astimezone(self.coordinator.data.zone_info).isoformat(): v[4] for k, v in zip([i for i in self.coordinator.consumption.keys() if i > self.coordinator.data.now], o[1:])}
         self._attr_is_on = o[0][4] if self.coordinator.now == self.coordinator.data.now else o[1][4]
+
+class SuppressExportSensor(EnergyManagementBinarySensorEntity):
+    _attr_icon = "mdi:transmission-tower-import"
+
+    def __init__(self, coordinator: Coordinator) -> None:
+        self._attr_name = "Suppress export"
+        super().__init__(coordinator)
+
+    def update(self):
+        super().update()
+        if not (data := self.coordinator.data):
+            return
+        self._attr_extra_state_attributes = {k.astimezone(self.coordinator.data.zone_info).isoformat(): v < 0 for k, v in data.compensation_rate.items()}
+        self._attr_is_on = data.compensation_rate[data.now] < 0
 
 class CostRateBelowMeanElectricitySensor(EnergyManagementBinarySensorEntity):
     _attr_icon = "mdi:cash-clock"
