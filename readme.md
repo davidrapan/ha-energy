@@ -27,4 +27,4 @@
 
 - Go to Settings > Devices & services > Integrations
 - Click ADD INTEGRATION, search for and select **Energy Management**
-- Enter the appropriate details (should be autodiscovered under most circumstances) and click SUBMIT
+- Enter the appropriate parameters and click SUBMIT
