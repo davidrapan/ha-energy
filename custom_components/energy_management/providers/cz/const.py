@@ -176,6 +176,176 @@ RATE = {
                 "T2": Decimal("0.11444")
             }
         }
+    },
+    2026: {
+        "": Decimal("0.49500") + Decimal("0.16424") + Decimal("0.02830"),
+        "cez": {
+            "D01d": {
+                "T1": Decimal("2.66666")
+            },
+            "D02d": {
+                "T1": Decimal("2.07858")
+            },
+            "D25d": {
+                "T1": Decimal("2.25245"),
+                "T2": Decimal("0.11650"),
+                "Name": "AKU8",
+                "Type": {
+                    "V1": ((time(hour = 0), time(hour = 6)), (time(hour = 19), time(hour = 21))),
+                    "V2": ((time(hour = 0), time(hour = 5)), (time(hour = 18), time(hour = 20)), (time(hour = 23), time(hour = 23, minute = 59, second = 59))),
+                    "V3": ((time(hour = 0), time(hour = 4)), (time(hour = 17), time(hour = 19)), (time(hour = 22), time(hour = 23, minute = 59, second = 59))),
+                    "V4": ((time(hour = 0), time(hour = 6)), (time(hour = 22), time(hour = 23, minute = 59, second = 59))),
+                    "V5": ((time(hour = 1), time(hour = 6)), (time(hour = 18), time(hour = 21))),
+                    "V6": ((time(hour = 3), time(hour = 6)), (time(hour = 15), time(hour = 18)), (time(hour = 21), time(hour = 23)))
+                }
+            },
+            "D26d": {
+                "T1": Decimal("1.20206"),
+                "T2": Decimal("0.11650"),
+                "Name": "AKU8",
+                "Type": {
+                    "V1": ((time(hour = 0), time(hour = 6)), (time(hour = 19), time(hour = 21))),
+                    "V2": ((time(hour = 0), time(hour = 5)), (time(hour = 18), time(hour = 20)), (time(hour = 23), time(hour = 23, minute = 59, second = 59))),
+                    "V3": ((time(hour = 0), time(hour = 4)), (time(hour = 17), time(hour = 19)), (time(hour = 22), time(hour = 23, minute = 59, second = 59))),
+                    "V4": ((time(hour = 0), time(hour = 6)), (time(hour = 22), time(hour = 23, minute = 59, second = 59))),
+                    "V5": ((time(hour = 1), time(hour = 6)), (time(hour = 18), time(hour = 21))),
+                    "V6": ((time(hour = 3), time(hour = 6)), (time(hour = 15), time(hour = 18)), (time(hour = 21), time(hour = 23)))
+                }
+            },
+            "D27d": {
+                "T1": Decimal("2.25245"),
+                "T2": Decimal("0.11650"),
+                "Name": "EMO",
+                "Type": {
+                    "V1": ((time(hour = 2), time(hour = 6)), (time(hour = 20), time(hour = 23, minute = 59, second = 59)))
+                }
+            },
+            "D35d": {
+                "T1": Decimal("0.75477"),
+                "T2": Decimal("0.11650"),
+                "Name": "AKU16",
+                "Type": {
+                    "V1": ((time(hour = 0), time(hour = 8)), (time(hour = 13), time(hour = 16)), (time(hour = 19), time(hour = 23, minute = 59, second = 59)))
+                }
+            },
+            "D45d": {
+                "T1": Decimal("0.75477"),
+                "T2": Decimal("0.11650"),
+                "Name": "PT",
+                "Type": {
+                    "V1": ((time(hour = 0), time(hour = 9)), (time(hour = 10), time(hour = 11)), (time(hour = 12), time(hour = 13)), (time(hour = 14), time(hour = 16)), (time(hour = 17), time(hour = 23, minute = 59, second = 59))),
+                    "V2": ((time(hour = 0), time(hour = 6)), (time(hour = 7), time(hour = 9)), (time(hour = 10), time(hour = 13)), (time(hour = 14), time(hour = 16)), (time(hour = 17), time(hour = 23, minute = 59, second = 59))),
+                    "V3": ((time(hour = 0), time(hour = 8)), (time(hour = 9), time(hour = 12)), (time(hour = 13), time(hour = 15)), (time(hour = 16), time(hour = 19)), (time(hour = 20), time(hour = 23, minute = 59, second = 59))),
+                    "V4": ((time(hour = 0), time(hour = 10)), (time(hour = 11), time(hour = 12)), (time(hour = 13), time(hour = 14)), (time(hour = 15), time(hour = 17)), (time(hour = 18), time(hour = 23, minute = 59, second = 59)))
+                }
+            },
+            "D56d": {
+                "T1": Decimal("0.75477"),
+                "T2": Decimal("0.11650"),
+                "Name": "TČ",
+                "Type": {
+                    "V1": ((time(hour = 0), time(hour = 9)), (time(hour = 10), time(hour = 12)), (time(hour = 14), time(hour = 23, minute = 59, second = 59)))
+                }
+            },
+            "D57d": {
+                "T1": Decimal("0.75477"),
+                "T2": Decimal("0.11650"),
+                "Name": "EV",
+                "Type": {
+                    "V1": ((time(hour = 0), time(hour = 6)), (time(hour = 7), time(hour = 9)), (time(hour = 10), time(hour = 13)), (time(hour = 14), time(hour = 16)), (time(hour = 17), time(hour = 23, minute = 59, second = 59))),
+                    "V2": ((time(hour = 0), time(hour = 8)), (time(hour = 9), time(hour = 12)), (time(hour = 13), time(hour = 15)), (time(hour = 16), time(hour = 19)), (time(hour = 20), time(hour = 23, minute = 59, second = 59))),
+                    "V3": ((time(hour = 0), time(hour = 10)), (time(hour = 11), time(hour = 12)), (time(hour = 13), time(hour = 14)), (time(hour = 15), time(hour = 17)), (time(hour = 18), time(hour = 23, minute = 59, second = 59)))
+                }
+            },
+            "D61d": {
+                "T1": Decimal("3.30667"),
+                "T2": Decimal("0.11650"),
+                "Name": "VIK",
+                "Type": {
+                    "V1": ((), (), (), (), ((time(hour = 12), time(hour = 23, minute = 59, second = 59))), ((time(hour = 0), time(hour = 23, minute = 59, second = 59))), ((time(hour = 0), time(hour = 22))))
+                }
+            }
+        },
+        "egd": {
+            "D01d": {
+                "T1": Decimal("2.71114")
+            },
+            "D02d": {
+                "T1": Decimal("2.29534")
+            },
+            "D25d": {
+                "T1": Decimal("2.24388"),
+                "T2": Decimal("0.22430")
+            },
+            "D26d": {
+                "T1": Decimal("1.23794"),
+                "T2": Decimal("0.22430")
+            },
+            "D27d": {
+                "T1": Decimal("2.24388"),
+                "T2": Decimal("0.22430")
+            },
+            "D35d": {
+                "T1": Decimal("0.74987"),
+                "T2": Decimal("0.22430")
+            },
+            "D45d": {
+                "T1": Decimal("0.74987"),
+                "T2": Decimal("0.22430")
+            },
+            "D56d": {
+                "T1": Decimal("0.74987"),
+                "T2": Decimal("0.22430")
+            },
+            "D57d": {
+                "T1": Decimal("0.74987"),
+                "T2": Decimal("0.22430")
+            },
+            "D61d": {
+                "T1": Decimal("3.36723"),
+                "T2": Decimal("0.22430")
+            }
+        },
+        "pre": {
+            "D01d": {
+                "T1": Decimal("1.85471")
+            },
+            "D02d": {
+                "T1": Decimal("1.51653")
+            },
+            "D25d": {
+                "T1": Decimal("1.65649"),
+                "T2": Decimal("0.17520")
+            },
+            "D26d": {
+                "T1": Decimal("1.00935"),
+                "T2": Decimal("0.17520")
+            },
+            "D27d": {
+                "T1": Decimal("1.65649"),
+                "T2": Decimal("0.17520")
+            },
+            "D35d": {
+                "T1": Decimal("0.42152"),
+                "T2": Decimal("0.17520")
+            },
+            "D45d": {
+                "T1": Decimal("0.42152"),
+                "T2": Decimal("0.17520")
+            },
+            "D56d": {
+                "T1": Decimal("0.42152"),
+                "T2": Decimal("0.17520")
+            },
+            "D57d": {
+                "T1": Decimal("0.42152"),
+                "T2": Decimal("0.17520")
+            },
+            "D61d": {
+                "T1": Decimal("2.34305"),
+                "T2": Decimal("0.17520")
+            }
+        }
     }
 }
 
