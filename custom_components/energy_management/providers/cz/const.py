@@ -178,7 +178,7 @@ RATE = {
         }
     },
     2026: {
-        "": Decimal("0.49500") + Decimal("0.16424") + Decimal("0.02830"),
+        "": Decimal("0.16424") + Decimal("0.02830"),
         "cez": {
             "D01d": {
                 "T1": Decimal("2.66666")
