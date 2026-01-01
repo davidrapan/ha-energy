@@ -7,6 +7,7 @@ from logging import getLogger
 
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
+from homeassistant.data_entry_flow import section
 from homeassistant.helpers import selector
 from homeassistant.core import callback
 
@@ -21,8 +22,13 @@ DATA_SCHEMA = vol.Schema({
     vol.Required("rate", default = "D57d", description = {SUGGESTED_VALUE: "D57d"}): selector.SelectSelector(selector.SelectSelectorConfig(options = ["D01d", "D02d", "D25d", "D26d", "D27d", "D35d", "D45d", "D56d", "D57d", "D61d"], mode = "dropdown")),
     vol.Required("tariff", default = "EVV1", description = {SUGGESTED_VALUE: "EVV1"}): str,
     vol.Required("spot_hourly", default = False, description = {SUGGESTED_VALUE: False}): bool,
-    vol.Optional("fix_t1_id", description = {SUGGESTED_VALUE: None}): selector.EntitySelector(selector.EntitySelectorConfig(multiple = False)),
-    vol.Optional("fix_t2_id", description = {SUGGESTED_VALUE: None}): selector.EntitySelector(selector.EntitySelectorConfig(multiple = False)),
+    vol.Required("fix"): section(
+        vol.Schema({
+            vol.Optional("t1_id", description = {SUGGESTED_VALUE: None}): selector.EntitySelector(selector.EntitySelectorConfig(multiple = False)),
+            vol.Optional("t2_id", description = {SUGGESTED_VALUE: None}): selector.EntitySelector(selector.EntitySelectorConfig(multiple = False)),
+        }),
+        {"collapsed": True}
+    ),
     vol.Required("cost_fee", default = 0.3, description = {SUGGESTED_VALUE: 0.3}): vol.Coerce(float),
     vol.Required("compensation_fee", default = 0.4, description = {SUGGESTED_VALUE: 0.4}): vol.Coerce(float),
     vol.Required("capacity", default = 9.7, description = {SUGGESTED_VALUE: 9.7}): vol.Coerce(float),

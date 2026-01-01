@@ -8,8 +8,6 @@
           "rate": "Distribution rate",
           "tariff": "Tariff",
           "spot_hourly": "Hourly electricity market",
-          "fix_t1_id": "Fix T1 entity",
-          "fix_t2_id": "Fix T2 entity",
           "cost_fee": "Market fee - buy [CZK/kWh]",
           "compensation_fee": "Market fee - sell [CZK/kWh]",
           "capacity": "Capacity [kWh]",
@@ -20,10 +18,21 @@
         },
         "data_description": {
           "tariff": "AKU8V6, EVV1, .. or region;RC_command",
-          "fix_t1_id": "Fill in only if necessary",
-          "fix_t2_id": "Fill in only if necessary",
           "battery_entity_ids": "Fill in only if necessary",
           "exclude_entity_ids": "Entities that will not be used for calculating consumption"
+        },
+        "sections": {
+          "fix": {
+            "name": "Fix",
+            "data": {
+              "t1_id": "Fix T1 entity",
+              "t2_id": "Fix T2 entity"
+            },
+            "data_description": {
+              "t1_id": "Fill in only if necessary",
+              "t2_id": "Fill in only if necessary"
+            }
+          }
         }
       }
     }
@@ -37,8 +46,6 @@
           "rate": "Distribution rate",
           "tariff": "Tariff",
           "spot_hourly": "Hourly electricity market",
-          "fix_t1_id": "Fix T1 entity",
-          "fix_t2_id": "Fix T2 entity",
           "cost_fee": "Market fee - buy [CZK/kWh]",
           "compensation_fee": "Market fee - sell [CZK/kWh]",
           "capacity": "Capacity [kWh]",
@@ -49,10 +56,21 @@
         },
         "data_description": {
           "tariff": "AKU8V6, EVV1, .. or region;RC_command",
-          "fix_t1_id": "Fill in only if necessary",
-          "fix_t2_id": "Fill in only if necessary",
           "battery_entity_ids": "Fill in only if necessary",
           "exclude_entity_ids": "Enter entities that will not be used for calculating consumption"
+        },
+        "sections": {
+          "fix": {
+            "name": "Fix",
+            "data": {
+              "t1_id": "Fix T1 entity",
+              "t2_id": "Fix T2 entity"
+            },
+            "data_description": {
+              "t1_id": "Fill in only if necessary",
+              "t2_id": "Fill in only if necessary"
+            }
+          }
         }
       }
     }
