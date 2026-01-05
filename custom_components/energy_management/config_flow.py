@@ -35,6 +35,7 @@ DATA_SCHEMA = vol.Schema({
     vol.Required("amortization", default = 2.0, description = {SUGGESTED_VALUE: 2.0}): vol.Coerce(float),
     vol.Optional("battery_entity_ids", description = {SUGGESTED_VALUE: None}): selector.EntitySelector(selector.EntitySelectorConfig(device_class = SensorDeviceClass.BATTERY, multiple = True)),
     vol.Optional("exclude_entity_ids", description = {SUGGESTED_VALUE: None}): selector.EntitySelector(selector.EntitySelectorConfig(device_class = SensorDeviceClass.ENERGY, multiple = True)),
+    vol.Optional("export_id", description = {SUGGESTED_VALUE: None}): selector.EntitySelector(selector.EntitySelectorConfig(device_class = SensorDeviceClass.POWER, multiple = False)),
     vol.Optional("key", default = "", description = {SUGGESTED_VALUE: ""}): str,
 })
 

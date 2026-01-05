@@ -14,6 +14,7 @@
           "amortization": "Amortizace [CZK/kWh]",
           "battery_entity_ids": "Entity baterie",
           "exclude_entity_ids": "Vyloučené entity",
+          "export_id": "Entita výkonu exportu",
           "key": "Klíč"
         },
         "data_description": {
@@ -52,6 +53,7 @@
           "amortization": "Amortizace [CZK/kWh]",
           "battery_entity_ids": "Entity baterie",
           "exclude_entity_ids": "Vyloučené entity",
+          "export_id": "Entita výkonu exportu",
           "key": "Klíč"
         },
         "data_description": {
