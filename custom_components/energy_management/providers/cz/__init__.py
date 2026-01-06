@@ -55,7 +55,7 @@ def _region_normalized(region: str):
     return region
 
 @acache
-async def _get_intervals(s: ClientSession, area: str, rate: str, tariff: str, _: date):
+async def _get_intervals(s: ClientSession, area: str, rate: str, tariff: str, dt: date):
     try:
         match area:
             case "cez" if ';' in tariff:
@@ -74,11 +74,12 @@ async def _get_intervals(s: ClientSession, area: str, rate: str, tariff: str, _:
             case "egd":
                 region, code = tariff.split(';') if ';' in tariff else ("", tariff)
                 region = region.upper()
-                code = code.upper()
+                #code = code.upper()
                 if region.isnumeric():
                     region = [x for x in await pg(s, URL_EGD_REGION) if x["PSC"] == region][0]["Region"]
                 code_a, code_b, code_dp = (regex.group(1), regex.group(2), regex.group(4)) if (regex := re.search("A(\\d+)B(\\d+)(DP|P)(\\d+)", code, re.IGNORECASE)) and len(regex.groups()) > 3 else (code, code, code)
-                resp = tuple(tuple((time(hour = int(o[0]), minute = int(o[1])), time(hour = int(f[0]), minute = int(f[1]))) for c in s["casy"] if (o := c["od"].split(":")) and (f := c["do"].split(":"))) for s in [r for r in [d for d in await pg(s, URL_EGD) if (not region and d["kodHdo_A"] == code_a) or (d["region"] == region and d['A'] == code_a and d['B'] == code_b and (d["DP"] == code_dp or d["DP"] == '0' + code_dp))][0]["sazby"] if rate in r["sazba"]][0]["dny"])
+                szby = [d for d in await pg(s, URL_EGD) if ((not region and d["kodHdo_A"] == code_a) or (d["region"] == region and d['A'] == code_a and d['B'] == code_b and (d["DP"] == code_dp or d["DP"] == '0' + code_dp))) and date(year = int(d["od"]["rok"]) if int(d["od"]["rok"]) != 9999 else dt.year if dt.month >= int(d["od"]["mesic"]) else dt.year - 1, month = int(d["od"]["mesic"]), day = int(d["od"]["den"])) <= dt <= date(year = int(d["do"]["rok"]) if int(d["do"]["rok"]) != 9999 else dt.year if dt.month <= int(d["do"]["mesic"]) else dt.year + 1, month = int(d["do"]["mesic"]), day = int(d["do"]["den"]))][0]["sazby"]
+                resp = tuple(tuple((time(hour = int(o[0]), minute = int(o[1])), time(hour = int(f[0]), minute = int(f[1]))) for c in s["casy"] if (o := c["od"].split(":")) and (f := c["do"].split(":"))) for s in [r for r in szby if rate in r["sazba"] or len(szby) == 1][0]["dny"])
                 _LOGGER.debug(f"Tariff intervals for '{region}' w/ code '{code}': {resp}")
                 if _all_same(resp):
                     return resp[0]
