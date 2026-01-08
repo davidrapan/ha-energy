@@ -407,7 +407,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                         "rate": [(float(self._data.rates_full[k]), float(self._data.compensation_rate[k])) for k in keys if k >= self.now],
                         "production": [self.forecast[k] for k in keys if k >= self.now],
                         "consumption": [(self.consumption_max.get(self.now) or 0.2) * 1.2] + [(self.consumption.get(k) or 0.2) * 1.2 for k in keys if k > self.now],
-                        "constraints": {"soc": self.battery / 100, "sell_power": float(e.state) if self.config_export_id and (e := self.hass.states.get(self.config_export_id)) and e.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else 99999.9, "charge_power": self.number_charge_power / 4, "discharge_power": self.number_discharge_power / 4, "soc_min": self.number_soc_min / 100, "soc_max": (self.number_soc_max if self.battery_max > 98 else 100) / 100, "capacity": self.config_capacity, "amortization": self.config_amortization}
+                        "constraints": {"soc": self.battery / 100, "sell_power": float(e.state) / 4 if self.config_export_id and (e := self.hass.states.get(self.config_export_id)) and e.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else 99999.9, "charge_power": self.number_charge_power / 4, "discharge_power": self.number_discharge_power / 4, "soc_min": self.number_soc_min / 100, "soc_max": (self.number_soc_max if self.battery_max > 98 else 100) / 100, "capacity": self.config_capacity, "amortization": self.config_amortization}
                     }
                     if (r := await common.pg(self._session, URL, json = json, headers = { "X-API-Key": self.config_key })) is not None:
                         _LOGGER.debug(f"Optimization of {json}: {r}")
