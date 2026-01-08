@@ -403,18 +403,20 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                     _LOGGER.debug(f"Last battery state error: {common.strepr(e)}")
             if self.battery is not None and self.consumption and next(iter(self.consumption.values())):
                 try:
-                    keys = [k for k in self._data.rates_full.keys() if k >= self.now]
+                    rats = {k: v for k, v in self._data.rates_full.items() if k >= self.now}
+                    rmin = min(rats.values())
+                    rang = float(max(rats.values()) - rmin)
                     json = {
-                        "rate": [(float(self._data.rates_full[k]), float(self._data.compensation_rate[k])) for k in keys],
-                        "production": [self.forecast[k] for k in keys],
-                        "consumption": [(self.consumption_max.get(self.now) or 0.2) * 1.2] + [(self.consumption.get(k) or 0.2) * 1.2 for k in keys if k > self.now],
+                        "rate": [(float(self._data.rates_full[k]), float(self._data.compensation_rate[k])) for k in rats.keys()],
+                        "production": [self.forecast[k] for k in rats.keys()],
+                        "consumption": [(self.consumption_max.get(self.now) or 0.5) * (1.0 + float(rats[self.now] - rmin) * 0.5 / rang)] + [(self.consumption.get(k) or 0.5) * q for k in rats.keys() if k > self.now and (q := 1.0 + float(rats[k] - rmin) * 0.5 / rang) is not None],
                         "constraints": {"soc": self.battery / 100, "sell_power": float(e.state) / 4 if self.config_export_id and (e := self.hass.states.get(self.config_export_id)) and e.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else 99999.9, "charge_power": self.number_charge_power / 4, "discharge_power": self.number_discharge_power / 4, "soc_min": self.number_soc_min / 100, "soc_max": (self.number_soc_max if self.battery_max > 98 else 100) / 100, "capacity": self.config_capacity, "amortization": self.config_amortization}
                     }
                     if (r := await common.pg(self._session, URL, json = json, headers = { "X-API-Key": self.config_key })) is not None:
                         _LOGGER.debug(f"Optimization of {json}: {r}")
                         self.predicted_cost = float(r[0][1])
                         self.predicted_amortization = float(r[0][3])
-                        self.optimization = {k: v for k, v in zip(keys, r[1])}
+                        self.optimization = {k: v for k, v in zip(rats.keys(), r[1])}
                 except Exception as e:
                     _LOGGER.exception(f"Optimization failed: {common.strepr(e)} ({json})")
 
