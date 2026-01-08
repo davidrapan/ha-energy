@@ -83,6 +83,7 @@ class CoordinatorData:
         self.rates_full: dict[datetime, Decimal] = {}
         self.compensation_rate: dict[datetime, Decimal] = {}
         self.spot_rate: dict[datetime, Decimal] = {}
+        self.optimization: dict[datetime, tuple[int, float, bool]] = {}
         for dt, v in self.yesterday.items():
             self.rates_full[dt.astimezone(self.zone_info)] = v[0]
             self.compensation_rate[dt.astimezone(self.zone_info)] = v[1]
@@ -121,7 +122,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
         self.cost_rate_today: float = None
         self.predicted_cost: float = .0
         self.predicted_amortization: float = .0
-        self.optimization: list[tuple[int, float, bool]] = []
+        self.optimization: dict[datetime, tuple[int, float, bool]] = {}
 
         self.number_soc_max = 90
         self.number_soc_min = 20
@@ -402,10 +403,10 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                     _LOGGER.debug(f"Last battery state error: {common.strepr(e)}")
             if self.battery is not None and self.consumption and next(iter(self.consumption.values())):
                 try:
-                    keys = self._data.rates_full.keys()
+                    keys = [k for k in self._data.rates_full.keys() if k >= self.now]
                     json = {
-                        "rate": [(float(self._data.rates_full[k]), float(self._data.compensation_rate[k])) for k in keys if k >= self.now],
-                        "production": [self.forecast[k] for k in keys if k >= self.now],
+                        "rate": [(float(self._data.rates_full[k]), float(self._data.compensation_rate[k])) for k in keys],
+                        "production": [self.forecast[k] for k in keys],
                         "consumption": [(self.consumption_max.get(self.now) or 0.2) * 1.2] + [(self.consumption.get(k) or 0.2) * 1.2 for k in keys if k > self.now],
                         "constraints": {"soc": self.battery / 100, "sell_power": float(e.state) / 4 if self.config_export_id and (e := self.hass.states.get(self.config_export_id)) and e.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else 99999.9, "charge_power": self.number_charge_power / 4, "discharge_power": self.number_discharge_power / 4, "soc_min": self.number_soc_min / 100, "soc_max": (self.number_soc_max if self.battery_max > 98 else 100) / 100, "capacity": self.config_capacity, "amortization": self.config_amortization}
                     }
@@ -413,7 +414,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                         _LOGGER.debug(f"Optimization of {json}: {r}")
                         self.predicted_cost = float(r[0][1])
                         self.predicted_amortization = float(r[0][3])
-                        self.optimization = r[1]
+                        self.optimization = {k: v for k, v in zip(keys, r[1])}
                 except Exception as e:
                     _LOGGER.exception(f"Optimization failed: {common.strepr(e)} ({json})")
 
@@ -436,5 +437,6 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
             await self._fetch_data()
 
         self._data.now = common.dt_block(utcnow())
+        self._data.optimization = {k: v for k, v in self.optimization.items() if k >= self._data.now}
 
         return self._data

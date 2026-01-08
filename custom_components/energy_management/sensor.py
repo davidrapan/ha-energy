@@ -47,10 +47,10 @@ class Battery(EnergyManagementSensorEntity):
 
     def update(self):
         super().update()
-        if not (o := self.coordinator.optimization[0 if self.coordinator.now == self.coordinator.data.now else 1:]):
+        if not (o := self.coordinator.data.optimization):
             return
-        self._attr_extra_state_attributes = {k.astimezone(self.coordinator.data.zone_info).isoformat(): v[0] for k, v, c in zip([i for i in self.coordinator.consumption.keys() if i >= self.coordinator.data.now], o, [[None]] + o) if v[0] != c[0]}
-        self._attr_native_value = o[0][0]
+        self._attr_extra_state_attributes = {k.isoformat(): v[0] for k, v, c in zip(o.keys(), o.values(), [[None]] + list(o.values())) if v[0] != c[0]}
+        self._attr_native_value = o[self.coordinator.data.now][0]
 
 class CompRate(EnergyManagementSensorEntity):
     _attr_icon = "mdi:cash-clock"
@@ -229,10 +229,10 @@ class PredictedBattery(EnergyManagementSensorEntity):
 
     def update(self):
         super().update()
-        if not (o := self.coordinator.optimization[0 if self.coordinator.now == self.coordinator.data.now else 1:]):
+        if not (o := self.coordinator.data.optimization):
             return
-        self._attr_extra_state_attributes = {k.astimezone(self.coordinator.data.zone_info).isoformat(): v[1] for k, v, c in zip([i for i in self.coordinator.consumption.keys() if i >= self.coordinator.data.now], o, [[None]] + o) if v[0] != c[0]}
-        self._attr_native_value = o[0][1]
+        self._attr_extra_state_attributes = {k.isoformat(): v[1] for k, v, c in zip(o.keys(), o.values(), [[None], [None]] + list(o.values())) if v[1] != c[1]}
+        self._attr_native_value = o[self.coordinator.data.now][1]
 
 class PredictedEnergy(EnergyManagementSensorEntity):
     def __init__(self, coordinator: Coordinator) -> None:
@@ -251,7 +251,7 @@ class PredictedEnergy(EnergyManagementSensorEntity):
 
     def update(self):
         super().update()
-        if not (o := self.coordinator.optimization[0 if self.coordinator.now == self.coordinator.data.now else 1:]):
+        if not (o := self.coordinator.data.optimization):
             return
-        self._attr_extra_state_attributes = {k.astimezone(self.coordinator.data.zone_info).isoformat(): v[2] for k, v, c in zip([i for i in self.coordinator.consumption.keys() if i >= self.coordinator.data.now], o, [[None]] + o) if v[0] != c[0]}
-        self._attr_native_value = o[0][2]
+        self._attr_extra_state_attributes = {k.isoformat(): v[2] for k, v in o.items()}
+        self._attr_native_value = o[self.coordinator.data.now][2]

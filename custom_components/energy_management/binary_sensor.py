@@ -34,10 +34,10 @@ class BatteryChargeFromGridSensor(EnergyManagementBinarySensorEntity):
 
     def update(self):
         super().update()
-        if not (o := self.coordinator.optimization[0 if self.coordinator.now == self.coordinator.data.now else 1:]):
+        if not (o := self.coordinator.data.optimization):
             return
-        self._attr_extra_state_attributes = {k.astimezone(self.coordinator.data.zone_info).isoformat(): v[3] for k, v in zip([i for i in self.coordinator.consumption.keys() if i >= self.coordinator.data.now], o)}
-        self._attr_is_on = o[0][3]
+        self._attr_extra_state_attributes = {k.isoformat(): v[3] for k, v in o.items()}
+        self._attr_is_on = o[self.coordinator.data.now][3]
 
 class BatteryDischargeToGridSensor(EnergyManagementBinarySensorEntity):
     _attr_icon = "mdi:power-plug-battery-outline"
@@ -48,10 +48,10 @@ class BatteryDischargeToGridSensor(EnergyManagementBinarySensorEntity):
 
     def update(self):
         super().update()
-        if not (o := self.coordinator.optimization[0 if self.coordinator.now == self.coordinator.data.now else 1:]):
+        if not (o := self.coordinator.data.optimization):
             return
-        self._attr_extra_state_attributes = {k.astimezone(self.coordinator.data.zone_info).isoformat(): v[4] for k, v in zip([i for i in self.coordinator.consumption.keys() if i >= self.coordinator.data.now], o)}
-        self._attr_is_on = o[0][4]
+        self._attr_extra_state_attributes = {k.isoformat(): v[4] for k, v in o.items()}
+        self._attr_is_on = o[self.coordinator.data.now][4]
 
 class SuppressExportSensor(EnergyManagementBinarySensorEntity):
     _attr_icon = "mdi:transmission-tower-import"
