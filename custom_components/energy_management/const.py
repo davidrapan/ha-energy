@@ -100,7 +100,7 @@ SQL_QUERY_SQLITE_PARAMS = {
 
 SQL_QUERY_BATTERY = """
 SELECT
-    MAX(t.state)
+    MAX(CAST(t.state AS INTEGER))
 FROM
     states t
 JOIN
