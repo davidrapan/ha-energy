@@ -355,6 +355,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                 recorder = get_instance(self.hass)
                 try:
                     if not self.consumption or next(iter(self.consumption.values())) is None or ((last_hour := common.dt_hour(self.now) - TIME_HOUR) and last_hour in self.today_consumption and self.today_consumption[last_hour] is None):
+                        offset = f"{o[:3]}:{o[3:]}" if (o := local.strftime('%z')) else "+00:00"
                         query_str = generate_query_string(
                             recorder.dialect_name == SupportedDialect.SQLITE,
                             common.joinify(*(grid_from + production_from + battery_from)),
@@ -365,7 +366,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                             common.joinify(*grid.get("cost", [])),
                             common.joinify(*grid.get("compensation", [])),
                             common.joinify(*self.config_exclude_entity_ids),
-                            f"{o[:3]}:{o[3:]}" if (o := local.strftime('%z')) else "+00:00",
+                            offset,
                             30,
                             today.weekday(),
                             (today + TIME_DAY).weekday()
@@ -382,18 +383,14 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                             self.imported[k] = v.get("imported")
                             self.exported[k] = v.get("exported")
                             self.cost[k] = v.get("cost")
-                        if (cost_sum := sum(filter(None, self.cost.values()))) > 0 and (imported_sum := sum(filter(None, self.imported.values()))) > 0:
-                            self.cost_today = cost_sum
-                            self.cost_rate_today = cost_sum / imported_sum
-                        else:
-                            self.cost_today = None
-                            self.cost_rate_today = None
+                        self.cost_today = sum(filter(None, self.cost.values()))
+                        self.cost_rate_today = (self.cost_today / imported_sum) if (imported_sum := sum(filter(None, self.imported.values()))) > 0 else None
                         if not self.now in self.cost_total:
                             self.cost_total.clear()
                             if (cost_sensors := self.hass.data["energy"]["cost_sensors"]) and (c := [cost_sensors[j] for j in grid_from]) and (all_stats := await recorder.async_add_executor_job(_compile_statistics, self.hass, now)):
                                 self.cost_total[self.now] = sum(map(lambda i: i["stat"]["sum"], _get_statistics_for_entity(all_stats, c)))
                         if battery_ids:
-                            self.battery_max = float(await self._execute_simple(generate_query_string_simple(recorder.dialect_name == SupportedDialect.SQLITE, common.joinify(*battery_ids), 30)))
+                            self.battery_max = float(await self._execute_simple(generate_query_string_simple(recorder.dialect_name == SupportedDialect.SQLITE, common.joinify(*battery_ids), offset, 30)))
                 except Exception as e:
                     _LOGGER.debug(f"Consumption statistics error: {common.strepr(e)}")
                 try:

@@ -15,9 +15,10 @@ _SQL_LAMBDA_CACHE: LRUCache = LRUCache(1000)
 def generate_query_string_simple(
     is_sqlite: bool,
     battery_ids: str,
+    offset: str,
     days: int,
 ) -> str:
-    return SQL_QUERY_BATTERY.format(**(SQL_QUERY_BATTERY_MYSQL_PARAMS if not is_sqlite else SQL_QUERY_BATTERY_SQLITE_PARAMS), battery_ids = battery_ids).format(days = days)
+    return SQL_QUERY_BATTERY.format(**(SQL_QUERY_BATTERY_MYSQL_PARAMS if not is_sqlite else SQL_QUERY_BATTERY_SQLITE_PARAMS), battery_ids = battery_ids).format(offset = offset, days = days)
 
 @cache
 def generate_query_string(
