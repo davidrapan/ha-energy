@@ -386,14 +386,14 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                             self.consumption[k] = c if (c := v.get("mean")) is not None else self.consumption.get(k - TIME_DAY)
                             self.consumption_max[k] = c if (c := v.get("maximum")) is not None else self.consumption_max.get(k - TIME_DAY)
                             self.today_consumption[k] = v.get("consumption")
-                            self.expected_consumption[k] = c if (c := self.today_consumption[k]) is not None else self.consumption[k]
+                            self.expected_consumption[k] = c if (c := self.today_consumption[k]) is not None else self.consumption[k] if k.astimezone(tzn).date() == today else None
                             self.production[k] = v.get("production")
                             self.imported[k] = v.get("imported")
                             self.exported[k] = v.get("exported")
                             self.cost[k] = v.get("cost")
                         self.cost_today = sum(filter(None, self.cost.values()))
                         self.cost_rate_today = (self.cost_today / imported_sum) if (imported_sum := sum(filter(None, self.imported.values()))) > 0 else None
-                        self.cost_today_expected = sum(float(self._data.rates_full[k]) * v for k, v in self.expected_consumption.items())
+                        self.cost_today_expected = sum(float(self._data.rates_full[k]) * v for k, v in self.expected_consumption.items() if v is not None)
                         if not self.now in self.cost_total:
                             self.cost_total.clear()
                             if (cost_sensors := self.hass.data["energy"]["cost_sensors"]) and (c := [cost_sensors[j] for j in grid_from]) and (all_stats := await recorder.async_add_executor_job(_compile_statistics, self.hass, now)):
