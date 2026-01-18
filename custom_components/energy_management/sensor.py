@@ -21,8 +21,10 @@ async def async_setup_entry(_: HomeAssistant, config_entry: ConfigEntry[Coordina
     async_add_entities([
         Battery(config_entry.runtime_data),
         CompRate(config_entry.runtime_data),
+        Consumption(config_entry.runtime_data),
         Cost(config_entry.runtime_data),
         CostToday(config_entry.runtime_data),
+        CostTodayExpected(config_entry.runtime_data),
         CostRate(config_entry.runtime_data),
         CostRateToday(config_entry.runtime_data),
         CostRateOrder(config_entry.runtime_data),
@@ -97,6 +99,20 @@ class CostToday(EnergyManagementSensorEntity):
         super().update()
         self._attr_native_value = self.coordinator.cost_today
 
+class CostTodayExpected(EnergyManagementSensorEntity):
+    _attr_icon = "mdi:cash"
+
+    def __init__(self, coordinator: Coordinator) -> None:
+        self._attr_name = "Cost - today expected"
+        self._attr_state_class = "total_increasing"
+        self._attr_native_unit_of_measurement = "CZK" if coordinator.hass.config.currency in ("CZK", "Kč") else "EUR"
+        self._attr_suggested_display_precision = 2
+        super().__init__(coordinator)
+
+    def update(self):
+        super().update()
+        self._attr_native_value = self.coordinator.cost_today_expected
+
 class CostRate(EnergyManagementSensorEntity):
     _attr_icon = "mdi:cash-clock"
 
@@ -167,9 +183,8 @@ class Consumption(EnergyManagementSensorEntity):
         super().update()
         if not (c := self.coordinator.consumption):
             return
-        self._attr_extra_state_attributes["mean"] = {k.astimezone(self.coordinator.data.zone_info).isoformat(): v for k, v in c.items()}
-        self._attr_extra_state_attributes["latest"] = {k.astimezone(self.coordinator.data.zone_info).isoformat(): v for k, v in self.coordinator.today_consumption.items() if v is not None}
-        self._attr_native_value = c[self.coordinator.data.now]
+        self._attr_extra_state_attributes = {k.astimezone(self.coordinator.data.zone_info).isoformat(): v * 4 for k, v in c.items() if k.minute == 0}
+        self._attr_native_value = c[self.coordinator.data.now] * 4
 
 class PredictedCost(EnergyManagementSensorEntity):
     _attr_icon = "mdi:cash"

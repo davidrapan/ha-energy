@@ -114,12 +114,14 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
         self.consumption: dict[datetime, float | int] = {}
         self.consumption_max: dict[datetime, float | int] = {}
         self.today_consumption: dict[datetime, float | int] = {}
+        self.expected_consumption: dict[datetime, float | int] = {}
         self.imported: dict[datetime, float | int] = {}
         self.exported: dict[datetime, float | int] = {}
         self.cost_total: dict[datetime | None, float | int] = {}
         self.cost: dict[datetime, float | int] = {}
         self.cost_today: float = None
         self.cost_rate_today: float = None
+        self.cost_today_expected: float = None
         self.predicted_cost: float = .0
         self.predicted_amortization: float = .0
         self.optimization: dict[datetime, tuple[int, float, bool]] = {}
@@ -286,6 +288,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                 self.consumption.clear()
                 self.consumption_max.clear()
                 self.today_consumption.clear()
+                self.expected_consumption.clear()
                 async for k, i, o, v in get_rates(**self._get_rates_params(self.now)):
                     _LOGGER.debug(f"Rate at {k}: {i}, {o}, {v}")
                     l_date = k.astimezone(tzn).date()
@@ -299,6 +302,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                     if l_date == today:
                         today_data[k] = (i, o, v)
                         self.today_consumption[k] = None
+                        self.expected_consumption[k] = None
                     elif l_date == today + TIME_DAY:
                         tomorrow_data[k] = (i, o, v)
             else:
@@ -311,12 +315,14 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                     self.consumption.clear()
                     self.consumption_max.clear()
                     self.today_consumption.clear()
+                    self.expected_consumption.clear()
                     for k in today_data:
                         self.forecast[k] = 0
                         self.production[k] = None
                         self.consumption[k] = None
                         self.consumption_max[k] = None
                         self.today_consumption[k] = None
+                        self.expected_consumption[k] = None
                 else:
                     yesterday_data: dict[datetime, tuple[Decimal, Decimal, Decimal]] = self.data.yesterday
                     today_data: dict[datetime, tuple[Decimal, Decimal, Decimal]] = self.data.today
@@ -355,7 +361,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                 battery_ids = [j.entity_id for j in battery_entities] + self.config_battery_entity_ids  
                 recorder = get_instance(self.hass)
                 try:
-                    if not self.consumption or next(iter(self.consumption.values())) is None or ((last_hour := common.dt_hour(self.now) - TIME_HOUR) and last_hour in self.today_consumption and self.today_consumption[last_hour] is None):
+                    if not self.consumption or next(iter(self.consumption.values())) is None or not self.today_consumption or self.today_consumption.get(self.now - TIME_HOUR) is None:
                         offset = f"{o[:3]}:{o[3:]}" if (o := local.strftime('%z')) else "+00:00"
                         query_str = generate_query_string(
                             recorder.dialect_name == SupportedDialect.SQLITE,
@@ -380,12 +386,14 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                             self.consumption[k] = c if (c := v.get("mean")) is not None else self.consumption.get(k - TIME_DAY)
                             self.consumption_max[k] = c if (c := v.get("maximum")) is not None else self.consumption_max.get(k - TIME_DAY)
                             self.today_consumption[k] = v.get("consumption")
+                            self.expected_consumption[k] = c if (c := self.today_consumption[k]) is not None else self.consumption[k]
                             self.production[k] = v.get("production")
                             self.imported[k] = v.get("imported")
                             self.exported[k] = v.get("exported")
                             self.cost[k] = v.get("cost")
                         self.cost_today = sum(filter(None, self.cost.values()))
                         self.cost_rate_today = (self.cost_today / imported_sum) if (imported_sum := sum(filter(None, self.imported.values()))) > 0 else None
+                        self.cost_today_expected = sum(float(self._data.rates_full[k]) * v for k, v in self.expected_consumption.items())
                         if not self.now in self.cost_total:
                             self.cost_total.clear()
                             if (cost_sensors := self.hass.data["energy"]["cost_sensors"]) and (c := [cost_sensors[j] for j in grid_from]) and (all_stats := await recorder.async_add_executor_job(_compile_statistics, self.hass, now)):
