@@ -128,6 +128,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
         self.number_soc_min = 20
         self.number_charge_power = 5.0
         self.number_discharge_power = 5.0
+        self.number_coefficient = 1.5
 
         self.default_service_info = {
             ATTR_IDENTIFIERS: {(DOMAIN, config_entry.entry_id)},
@@ -406,7 +407,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                     json = {
                         "rate": [(float(self._data.rates_full[k]), float(self._data.compensation_rate[k])) for k in rats.keys()],
                         "production": [self.forecast[k] for k in rats.keys()],
-                        "consumption": [(self.consumption_max.get(self.now) or 0.5) * (1 + float(rats[self.now] - rmin) * 0.5 / rang)] + [(self.consumption.get(k) or 0.5) * q for k in rats.keys() if k > self.now and (q := 1 + float(rats[k] - rmin) * 0.2 / rang) is not None],
+                        "consumption": [(self.consumption_max.get(self.now) or 0.5) * (1 + float(rats[self.now] - rmin) * (self.number_coefficient - 1) / rang)] + [(self.consumption.get(k) or 0.5) * q for k in rats.keys() if k > self.now and (q := 1 + float(rats[k] - rmin) * 0.2 / rang) is not None],
                         "constraints": {"soc": self.battery / 100, "sell_power": float(e.state) / 4 if self.config_export_id and (e := self.hass.states.get(self.config_export_id)) and e.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else 99999.9, "charge_power": self.number_charge_power / 4, "discharge_power": self.number_discharge_power / 4, "soc_min": self.number_soc_min / 100, "soc_max": (self.number_soc_max if self.battery_max > 98 else 100) / 100, "capacity": self.config_capacity, "amortization": self.config_amortization}
                     }
                     if (r := await common.pg(self._session, URL, json = json, headers = { "X-API-Key": self.config_key })) is not None:
