@@ -4,7 +4,9 @@ import asyncio
 import itertools
 
 from typing import Any
+from operator import add
 from decimal import Decimal
+from functools import reduce
 from logging import getLogger
 from zoneinfo import ZoneInfo
 from datetime import datetime, timedelta
@@ -394,10 +396,11 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                         self.cost_today = sum(filter(None, self.cost.values()))
                         self.cost_rate_today = (self.cost_today / imported_sum) if (imported_sum := sum(filter(None, self.imported.values()))) > 0 else None
                         self.cost_today_expected = sum(float(self._data.rates_full[k]) * v for k, v in self.expected_consumption.items() if v is not None)
-                        if not self.now in self.cost_total:
-                            self.cost_total.clear()
-                            if (cost_sensors := self.hass.data["energy"]["cost_sensors"]) and (c := [cost_sensors[j] for j in grid_from]) and (all_stats := await recorder.async_add_executor_job(_compile_statistics, self.hass, now)):
-                                self.cost_total[self.now] = sum(map(lambda i: i["stat"]["sum"], _get_statistics_for_entity(all_stats, c)))
+                        if not today in self.cost_total and (cost_sensors := self.hass.data["energy"]["cost_sensors"]) and (c := [cost_sensors[j] for j in grid_from]) and (all_stats := await recorder.async_add_executor_job(_compile_statistics, self.hass, now)):
+                            try:
+                                self.cost_total[today] = reduce(add, map(lambda i: i["stat"]["sum"], _get_statistics_for_entity(all_stats, c)))
+                            except Exception as e:
+                                _LOGGER.debug(f"Cost statistics error: {common.strepr(e)}")
                         if battery_ids:
                             self.battery_max = float(await self._execute_simple(generate_query_string_simple(recorder.dialect_name == SupportedDialect.SQLITE, common.joinify(*battery_ids), offset, 30)))
                 except Exception as e:
