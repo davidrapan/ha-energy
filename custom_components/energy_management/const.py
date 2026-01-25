@@ -77,7 +77,7 @@ SELECT
 FROM
     arithmetic
 LEFT OUTER JOIN
-    (SELECT * FROM arithmetic t WHERE DATE({datetime}) = DATE(CURRENT_TIMESTAMP)) AS latest ON latest.hour_of_day = arithmetic.hour_of_day
+    (SELECT * FROM arithmetic t WHERE DATE({datetime}) = DATE({current_timestamp})) AS latest ON latest.hour_of_day = arithmetic.hour_of_day
 GROUP BY
     arithmetic.hour_of_day
 """.strip()
@@ -88,6 +88,7 @@ SQL_QUERY_MYSQL_PARAMS = {
     "date_sub": "DATE_SUB(CURDATE(), INTERVAL {days} DAY)",
     "hour_of_day": "HOUR(start_dt)",
     "day_of_week": "WEEKDAY(start_dt)",
+    "current_timestamp": "CURRENT_TIMESTAMP",
 }
 
 SQL_QUERY_SQLITE_PARAMS = {
@@ -96,6 +97,7 @@ SQL_QUERY_SQLITE_PARAMS = {
     "date_sub": "strftime('%s', 'now', '-{days} day', '{offset}')",
     "hour_of_day": "CAST(strftime('%H', start_ts, 'unixepoch', '{offset}') AS INTEGER)",
     "day_of_week": "CAST(strftime('%u', start_ts, 'unixepoch', '{offset}') AS INTEGER) - 1",
+    "current_timestamp": "strftime('%Y-%m-%d %H:%M:%S', 'now', '{offset}')",
 }
 
 SQL_QUERY_BATTERY = """
@@ -115,6 +117,6 @@ SQL_QUERY_BATTERY_MYSQL_PARAMS = {
 }
 
 SQL_QUERY_BATTERY_SQLITE_PARAMS = {
-    "datetime": "strftime('%Y-%m-%d %H:%M:%S', t.last_changed_ts, 'unixepoch', '{offset}')",
+    "datetime": "strftime('%Y-%m-%d %H:%M:%S', t.start_ts, 'unixepoch', '{offset}')",
     "date_sub": "strftime('%s', 'now', '-{days} day', '{offset}')",
 }
