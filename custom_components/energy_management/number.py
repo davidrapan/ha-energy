@@ -21,7 +21,8 @@ async def async_setup_entry(_: HomeAssistant, config_entry: ConfigEntry[Coordina
         DischargePowerNumberEntity(config_entry.runtime_data),
         MinSOCNumberEntity(config_entry.runtime_data),
         MaxSOCNumberEntity(config_entry.runtime_data),
-        CoefficientNumberEntity(config_entry.runtime_data)
+        CoefficientNumberEntity(config_entry.runtime_data),
+        CoefficientStrategyNumberEntity(config_entry.runtime_data)
     ])
 
 class EnergyManagementRestoreNumber(EnergyManagementEntity, RestoreNumber):
@@ -146,4 +147,27 @@ class CoefficientNumberEntity(EnergyManagementRestoreNumber):
 
     async def async_set_native_value(self, value: float):
         self.coordinator.number_coefficient = value
+        self.async_write_ha_state()
+
+class CoefficientStrategyNumberEntity(EnergyManagementRestoreNumber):
+    def __init__(self, coordinator):
+        self._attr_name = "Coefficient - strategy"
+        self._attr_entity_category = EntityCategory.CONFIG
+        self._attr_suggested_display_precision = 1
+        self._attr_mode = NumberMode.BOX
+        self._attr_native_step = 0.01
+        self._attr_min_value = 1.0
+        super().__init__(coordinator)
+
+    @property
+    def native_value(self):
+        return self.coordinator.number_coefficient_strategy
+
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        if last_number_data := await self.async_get_last_number_data():
+            self.coordinator.number_coefficient_strategy = last_number_data.native_value
+
+    async def async_set_native_value(self, value: float):
+        self.coordinator.number_coefficient_strategy = value
         self.async_write_ha_state()
