@@ -281,7 +281,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
             self.now = common.dt_block(now)
             local = self.now.astimezone(tzn)
             today = local.date()
-            get_rates, tomorrow_available = get_function(self._session, self.config_area, self.config_rate, self.config_tariff, "" if not self.config_spot_hourly else "Hourly", (self.config_cost_fee, self.config_compensation_fee), self.hass.config.country + ("" if not self.config_fix_t1_id else "-fix"), self.hass.config.currency)
+            get_rates, tomorrow_available = get_function(self._session, self.config_area, self.config_rate, self.config_tariff, "" if not self.config_spot_hourly else "Hourly", (self.config_cost_fee, self.config_compensation_fee), self.hass.config.country, self.hass.config.currency)
             if not self.data or not self.data.tomorrow and tomorrow_available(self.now):
                 yesterday_data: dict[datetime, tuple[Decimal, Decimal, Decimal]] = {}
                 today_data: dict[datetime, tuple[Decimal, Decimal, Decimal]] = {}
@@ -292,7 +292,8 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                 self.consumption_max.clear()
                 self.today_consumption.clear()
                 self.expected_consumption.clear()
-                async for k, i, o, v in get_rates(**self._get_rates_params(self.now)):
+                rates_params = self._get_rates_params(self.now)
+                async for k, i, o, v in get_rates(**rates_params):
                     _LOGGER.debug(f"Rate at {k}: {i}, {o}, {v}")
                     l_date = k.astimezone(tzn).date()
                     if l_date == today - TIME_DAY:
@@ -308,6 +309,32 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                         self.expected_consumption[k] = None
                     elif l_date == today + TIME_DAY:
                         tomorrow_data[k] = (i, o, v)
+                if get_fix_rates := get_function(self._session, self.config_area, self.config_rate, self.config_tariff, "" if not self.config_spot_hourly else "Hourly", (self.config_cost_fee, self.config_compensation_fee), self.hass.config.country + "-fix", self.hass.config.currency)[0] if self.config_fix_t1_id else {}:
+                    async for k, i, o, v in get_fix_rates(**rates_params):
+                        _LOGGER.debug(f"Fix at {k}: {i}, {o}, {v}")
+                        l_date = k.astimezone(tzn).date()
+                        if l_date == today - TIME_DAY:
+                            if k in yesterday_data:
+                                yesterday_data[k] = (i,) + yesterday_data[k][1:]
+                            #else:
+                            #    yesterday_data[k] = (i, o, v)
+                        #else:
+                        #    self.forecast[k] = 0
+                        #    self.production[k] = None
+                        #    self.consumption[k] = None
+                        #    self.consumption_max[k] = None
+                        if l_date == today:
+                            if k in today_data:
+                                today_data[k] = (i,) + today_data[k][1:]
+                            #else:
+                            #    today_data[k] = (i, o, v)
+                            #self.today_consumption[k] = None
+                            #self.expected_consumption[k] = None
+                        elif l_date == today + TIME_DAY:
+                            if k in tomorrow_data:
+                                tomorrow_data[k] = (i,) + tomorrow_data[k][1:]
+                            #else:
+                            #    tomorrow_data[k] = (i, o, v) 
             else:
                 if next(iter(self.data.today)).astimezone(tzn).date() != today:
                     yesterday_data: dict[datetime, tuple[Decimal, Decimal, Decimal]] = self.data.today
@@ -419,7 +446,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                     json = {
                         "rate": [(float(self._data.rates_full[k]), float(self._data.compensation_rate[k])) for k in rats.keys()],
                         "production": [self.forecast[k] for k in rats.keys()],
-                        "consumption": [(self.consumption_max.get(self.now) or 0.5) * (1 + float(rats[self.now] - rmin) * (self.number_coefficient - 1) / rang)] + [(self.consumption.get(k) or 0.5) * q for k in rats.keys() if k > self.now and (q := 1 + float(rats[k] - rmin) * (self.number_coefficient_strategy - 1) / rang) is not None],
+                        "consumption": [(self.consumption_max.get(self.now) or 2.0) * (1 + float(rats[self.now] - rmin) * (self.number_coefficient - 1) / rang) if rang > 0 else 1] + [(self.consumption.get(k) or 0.5) * q for k in rats.keys() if k > self.now and (q := (1 + float(rats[k] - rmin) * (self.number_coefficient_strategy - 1) / rang) if rang > 0 else 1) is not None],
                         "constraints": {"soc": self.battery / 100, "sell_power": float(e.state) / 4 if self.config_export_id and (e := self.hass.states.get(self.config_export_id)) and e.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else 99999.9, "charge_power": self.number_charge_power / 4, "discharge_power": self.number_discharge_power / 4, "soc_min": self.number_soc_min / 100, "soc_max": (self.number_soc_max if self.battery_max > 98 else 100) / 100, "capacity": self.config_capacity, "amortization": self.config_amortization}
                     }
                     if (r := await common.pg(self._session, URL, json = json, headers = { "X-API-Key": self.config_key })) is not None:
