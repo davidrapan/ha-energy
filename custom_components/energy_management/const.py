@@ -117,6 +117,6 @@ SQL_QUERY_BATTERY_MYSQL_PARAMS = {
 }
 
 SQL_QUERY_BATTERY_SQLITE_PARAMS = {
-    "datetime": "strftime('%Y-%m-%d %H:%M:%S', t.start_ts, 'unixepoch', '{offset}')",
+    "datetime": "strftime('%Y-%m-%d %H:%M:%S', t.last_changed_ts, 'unixepoch', '{offset}')",
     "date_sub": "strftime('%s', 'now', '-{days} day', '{offset}')",
 }
