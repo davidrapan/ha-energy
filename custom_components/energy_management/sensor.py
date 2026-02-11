@@ -184,7 +184,7 @@ class Consumption(EnergyManagementSensorEntity):
         if not (c := self.coordinator.consumption):
             return
         today = self.coordinator.data.now.astimezone(self.coordinator.data.zone_info).date()
-        value = {ki.isoformat(): v * 4 for k, v in c.items() if (ki := k.astimezone(self.coordinator.data.zone_info)) is not None and ki.date() == today and k.minute == 0}
+        value = {ki.isoformat(): (v or 0.5) * 4 for k, v in c.items() if (ki := k.astimezone(self.coordinator.data.zone_info)) is not None and ki.date() == today and k.minute == 0}
         self._attr_extra_state_attributes = value
         self._attr_native_value = sum(value.values())
 
