@@ -22,6 +22,7 @@ async def async_setup_entry(_: HomeAssistant, config_entry: ConfigEntry[Coordina
         Battery(config_entry.runtime_data),
         CompRate(config_entry.runtime_data),
         Consumption(config_entry.runtime_data),
+        Grid(config_entry.runtime_data),
         Cost(config_entry.runtime_data),
         CostToday(config_entry.runtime_data),
         CostTodayExpected(config_entry.runtime_data),
@@ -188,6 +189,21 @@ class Consumption(EnergyManagementSensorEntity):
         self._attr_extra_state_attributes = value
         self._attr_native_value = sum(value.values())
 
+class Grid(EnergyManagementSensorEntity):
+    def __init__(self, coordinator: Coordinator) -> None:
+        self._attr_name = "Grid"
+        self._attr_device_class = "energy"
+        self._attr_state_class = "total"
+        self._attr_native_unit_of_measurement = "kWh"
+        super().__init__(coordinator)
+
+    def update(self):
+        super().update()
+        if not (o := self.coordinator.data.optimization):
+            return
+        self._attr_extra_state_attributes = {k.isoformat(): v[1] for k, v in o.items()}
+        self._attr_native_value = o[self.coordinator.data.now][1] * 4
+
 class PredictedCost(EnergyManagementSensorEntity):
     _attr_icon = "mdi:cash"
 
@@ -250,25 +266,3 @@ class PredictedBattery(EnergyManagementSensorEntity):
             return
         self._attr_extra_state_attributes = {k.isoformat(): v[1] for k, v, c in zip(o.keys(), o.values(), [[None], [None]] + list(o.values())) if v[1] != c[1]}
         self._attr_native_value = o[self.coordinator.data.now][1]
-
-class PredictedEnergy(EnergyManagementSensorEntity):
-    def __init__(self, coordinator: Coordinator) -> None:
-        self._attr_name = "Energy"
-        self._attr_device_class = "energy"
-        self._attr_state_class = "total"
-        self._attr_native_unit_of_measurement = "kWh"
-        super().__init__(coordinator)
-        i = slugify(coordinator.config_entry.entry_id, "Predicted")
-        self._attr_unique_id = slugify(i, self._attr_name)
-        self._attr_device_info |= {
-            ATTR_IDENTIFIERS: {(DOMAIN, i)},
-            ATTR_NAME: f"{self._attr_device_info[ATTR_NAME]} Predicted",
-            ATTR_VIA_DEVICE: (DOMAIN, coordinator.config_entry.entry_id)
-        }
-
-    def update(self):
-        super().update()
-        if not (o := self.coordinator.data.optimization):
-            return
-        self._attr_extra_state_attributes = {k.isoformat(): v[2] for k, v in o.items()}
-        self._attr_native_value = o[self.coordinator.data.now][2]
