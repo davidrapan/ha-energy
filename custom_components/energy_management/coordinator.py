@@ -387,9 +387,8 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                 battery_from = battery.get("from", [])
                 battery_to = battery.get("to", [])
                 registry = entity_registry.async_get(self.hass)
-                battery_entities = [i for j in battery_from if (e := registry.entities.get_entries_for_device_id(registry.async_get(j).device_id)) for i in e if "battery" in (i.original_device_class, i.device_class)]
-                _LOGGER.debug(f"Production: {production_from}, Grid from: {grid_from}, Grid to: {grid_to}, Battery from: {battery_from}, Battery to: {battery_to}, Battery: {battery_entities}")
-                battery_ids = [j.entity_id for j in battery_entities] + self.config_battery_entity_ids  
+                battery_soc = [i.entity_id for j in battery_from if (e := registry.entities.get_entries_for_device_id(registry.async_get(j).device_id)) for i in e if "battery" in (i.original_device_class, i.device_class)] if not self.config_battery_entity_ids else self.config_battery_entity_ids
+                _LOGGER.debug(f"Production: {production_from}, Grid from: {grid_from}, Grid to: {grid_to}, Battery from: {battery_from}, Battery to: {battery_to}, Battery: {battery_soc}")
                 recorder = get_instance(self.hass)
                 try:
                     if not self.consumption or next(iter(self.consumption.values())) is None or not self.today_consumption or self.today_consumption.get(self.now - TIME_HOUR) is None:
@@ -430,12 +429,12 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                                 self.cost_total[today] = reduce(add, map(lambda i: i["stat"]["sum"], _get_statistics_for_entity(all_stats, c)))
                             except Exception as e:
                                 _LOGGER.debug(f"Cost statistics error: {common.strepr(e)}")
-                        if battery_ids:
-                            self.battery_max = float(await self._execute_simple(generate_query_string_simple(recorder.dialect_name == SupportedDialect.SQLITE, common.joinify(*battery_ids), offset, 30)))
+                        if battery_soc:
+                            self.battery_max = float(await self._execute_simple(generate_query_string_simple(recorder.dialect_name == SupportedDialect.SQLITE, common.joinify(*battery_soc), offset, 30)))
                 except Exception as e:
                     _LOGGER.debug(f"Consumption statistics error: {common.strepr(e)}")
                 try:
-                    if battery_ids and (stats := await recorder.async_add_executor_job(_get_significant_states_with_session, self.hass, self.now, battery_ids)):
+                    if battery_soc and (stats := await recorder.async_add_executor_job(_get_significant_states_with_session, self.hass, self.now, battery_soc)):
                         self.battery = sum(map(lambda i: float(stats[i][-1]["s"]), stats)) / len(stats)
                 except Exception as e:
                     _LOGGER.debug(f"Last battery state error: {common.strepr(e)}")
