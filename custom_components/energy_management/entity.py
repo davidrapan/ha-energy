@@ -30,7 +30,7 @@ class EnergyManagementEntity(CoordinatorEntity[Coordinator]):
     @callback
     def _handle_coordinator_update(self) -> None:
         self.update()
-        self.async_write_ha_state()
+        super()._handle_coordinator_update()
 
     def update(self):
         self._attr_extra_state_attributes = {}

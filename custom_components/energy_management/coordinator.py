@@ -128,13 +128,6 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
         self.predicted_amortization: float = .0
         self.optimization: dict[datetime, tuple[int, float, bool]] = {}
 
-        self.number_soc_max = 90
-        self.number_soc_min = 20
-        self.number_charge_power = 5.0
-        self.number_discharge_power = 5.0
-        self.number_coefficient = 1.5
-        self.number_coefficient_strategy = 1.2
-
         self.default_service_info = {
             ATTR_IDENTIFIERS: {(DOMAIN, config_entry.entry_id)},
             ATTR_NAME: "Energy Management",
@@ -237,6 +230,13 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
         self.config_import_ids = self.config_entry.options.get("import_ids")
         self.config_export_id = self.config_entry.options.get("export_id")
         self.config_key = self.config_entry.options.get("key", "")
+        self.config_soc_max = self.config_entry.options.get("soc_max", 90)
+        self.config_soc_min = self.config_entry.options.get("soc_min", 20)
+        self.config_charge_power = self.config_entry.options.get("charge_power", 5.0)
+        self.config_discharge_power = self.config_entry.options.get("discharge_power", 5.0)
+        self.config_coefficient = self.config_entry.options.get("coefficient", 1.5)
+        self.config_coefficient_strategy = self.config_entry.options.get("coefficient_strategy", 1.2)
+        self.config_consumption_strategy = self.config_entry.options.get("consumption_strategy", 30)
         _LOGGER.debug(f"Area: {self.config_area}, rate: {self.config_rate}, tariff: {self.config_tariff}, spot_hourly: {self.config_spot_hourly}, cost_fee: {self.config_cost_fee}, compensation_fee: {self.config_compensation_fee}, capacity: {self.config_capacity}, amortization: {self.config_amortization}, battery_entity_id: {self.config_battery_entity_ids}, exclude_entity_ids {self.config_exclude_entity_ids}, key: {"***" if self.config_key else "Empty"}")
         try:
             self._energy_entries: dict[str, dict[str, list[str] | dict[str, str | None]]] = {}
@@ -404,7 +404,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                             common.joinify(*grid.get("compensation", [])),
                             common.joinify(*self.config_exclude_entity_ids),
                             offset,
-                            30,
+                            self.config_consumption_strategy,
                             today.weekday(),
                             (today + TIME_DAY).weekday()
                         )
@@ -430,7 +430,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                             except Exception as e:
                                 _LOGGER.debug(f"Cost statistics error: {common.strepr(e)}")
                         if battery_soc:
-                            self.battery_max = float(await self._execute_simple(generate_query_string_simple(recorder.dialect_name == SupportedDialect.SQLITE, common.joinify(*battery_soc), offset, 30)))
+                            self.battery_max = float(await self._execute_simple(generate_query_string_simple(recorder.dialect_name == SupportedDialect.SQLITE, common.joinify(*battery_soc), offset, 15)))
                 except Exception as e:
                     _LOGGER.debug(f"Consumption statistics error: {common.strepr(e)}")
                 try:
@@ -446,8 +446,8 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                     json = {
                         "rate": [(float(self._data.rates_full[k]), float(self._data.compensation_rate[k])) for k in rats.keys()],
                         "production": [self.forecast[k] for k in rats.keys()],
-                        "consumption": [(self.consumption_max.get(self.now) or 2.0) * (1 + float(rats[self.now] - rmin) * (self.number_coefficient - 1) / rang) if rang > 0 else 1] + [(self.consumption.get(k) or 0.5) * q for k in rats.keys() if k > self.now and (q := (1 + float(rats[k] - rmin) * (self.number_coefficient_strategy - 1) / rang) if rang > 0 else 1) is not None],
-                        "constraints": {"soc": self.battery / 100, "grid_power": i / 4 if self.config_import_ids and (i := sum(float(v.state) for id in self.config_import_ids if (v := self.hass.states.get(id)) and v.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE))) else 99999.9, "sell_power": float(e.state) / 4 if self.config_export_id and (e := self.hass.states.get(self.config_export_id)) and e.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else 99999.9, "charge_power": self.number_charge_power / 4, "discharge_power": self.number_discharge_power / 4, "soc_min": self.number_soc_min / 100, "soc_max": (self.number_soc_max if self.battery_max > 98 else 100) / 100, "capacity": self.config_capacity, "amortization": self.config_amortization}
+                        "consumption": [(self.consumption_max.get(self.now) or 2.0) * (1 + float(rats[self.now] - rmin) * (self.config_coefficient - 1) / rang) if rang > 0 else 1] + [(self.consumption.get(k) or 0.5) * q for k in rats.keys() if k > self.now and (q := (1 + float(rats[k] - rmin) * (self.config_coefficient_strategy - 1) / rang) if rang > 0 else 1) is not None],
+                        "constraints": {"soc": self.battery / 100, "grid_power": i / 4 if self.config_import_ids and (i := sum(float(v.state) for id in self.config_import_ids if (v := self.hass.states.get(id)) and v.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE))) else 99999.9, "sell_power": float(e.state) / 4 if self.config_export_id and (e := self.hass.states.get(self.config_export_id)) and e.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else 99999.9, "charge_power": self.config_charge_power / 4, "discharge_power": self.config_discharge_power / 4, "soc_min": self.config_soc_min / 100, "soc_max": (self.config_soc_max if self.battery_max > 98 else 100) / 100, "capacity": self.config_capacity, "amortization": self.config_amortization}
                     }
                     if (r := await common.pg(self._session, URL, json = json, headers = { "X-API-Key": self.config_key })) is not None:
                         _LOGGER.debug(f"Optimization of {json}: {r}")
