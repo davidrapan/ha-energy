@@ -233,6 +233,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
         self.config_soc_max = self.config_entry.options.get("soc_max", 90)
         self.config_soc_min = self.config_entry.options.get("soc_min", 20)
         self.config_soc_reserve = self.config_entry.options.get("soc_reserve", 50 if self.config_soc_max >= 50 >= self.config_soc_min else self.config_soc_min)
+        self.config_soc_threshold = self.config_entry.options.get("soc_threshold", self.config_soc_max)
         self.config_charge_power = self.config_entry.options.get("charge_power", 5.0)
         self.config_discharge_power = self.config_entry.options.get("discharge_power", 5.0)
         self.config_coefficient = self.config_entry.options.get("coefficient", 1.5)

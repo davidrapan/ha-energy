@@ -24,7 +24,8 @@ async def async_setup_entry(_: HomeAssistant, config_entry: ConfigEntry[Coordina
         ReserveSOCNumberEntity(config_entry.runtime_data),
         CoefficientNumberEntity(config_entry.runtime_data),
         CoefficientStrategyNumberEntity(config_entry.runtime_data),
-        ConsumptionStrategyNumberEntity(config_entry.runtime_data)
+        ConsumptionStrategyNumberEntity(config_entry.runtime_data),
+        SuppressExportSOCThresholdNumberEntity(config_entry.runtime_data)
     ])
 
 class EnergyManagementRestoreNumber(EnergyManagementEntity, RestoreNumber):
@@ -230,4 +231,25 @@ class ConsumptionStrategyNumberEntity(EnergyManagementRestoreNumber):
     async def async_set_native_value(self, value: float):
         self.coordinator.config_consumption_strategy = int(value)
         self.update_options(self.coordinator.config_consumption_strategy)
+        self.async_write_ha_state()
+
+class SuppressExportSOCThresholdNumberEntity(EnergyManagementRestoreNumber):
+    def __init__(self, coordinator):
+        self._attr_key = "soc_threshold"
+        self._attr_name = "Suppress export - battery threshold"
+        self._attr_device_class = NumberDeviceClass.BATTERY
+        self._attr_entity_category = EntityCategory.CONFIG
+        self._attr_native_unit_of_measurement = "%"
+        self._attr_mode = NumberMode.BOX
+        self._attr_max_value = 100
+        self._attr_min_value = 0
+        super().__init__(coordinator)
+
+    @property
+    def native_value(self):
+        return self.coordinator.config_soc_threshold
+
+    async def async_set_native_value(self, value: float):
+        self.coordinator.config_soc_threshold = int(value)
+        self.update_options(self.coordinator.config_soc_threshold)
         self.async_write_ha_state()
