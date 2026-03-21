@@ -16,7 +16,7 @@ from .coordinator import Coordinator
 
 _LOGGER = getLogger(__name__)
 
-_PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.NUMBER]
+_PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.SELECT, Platform.NUMBER]
 
 CONFIG_SCHEMA = config_validation.empty_config_schema(DOMAIN)
 
