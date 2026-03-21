@@ -19,8 +19,9 @@ async def async_setup_entry(_: HomeAssistant, config_entry: ConfigEntry[Coordina
     async_add_entities([
         ChargePowerNumberEntity(config_entry.runtime_data),
         DischargePowerNumberEntity(config_entry.runtime_data),
-        MinSOCNumberEntity(config_entry.runtime_data),
         MaxSOCNumberEntity(config_entry.runtime_data),
+        MinSOCNumberEntity(config_entry.runtime_data),
+        ReserveSOCNumberEntity(config_entry.runtime_data),
         CoefficientNumberEntity(config_entry.runtime_data),
         CoefficientStrategyNumberEntity(config_entry.runtime_data),
         ConsumptionStrategyNumberEntity(config_entry.runtime_data)
@@ -82,6 +83,27 @@ class MinSOCNumberEntity(EnergyManagementRestoreNumber):
     async def async_set_native_value(self, value: float):
         self.coordinator.config_soc_min = int(value)
         self.update_options(self.coordinator.config_soc_min)
+        self.async_write_ha_state()
+
+class ReserveSOCNumberEntity(EnergyManagementRestoreNumber):
+    def __init__(self, coordinator):
+        self._attr_key = "soc_reserve"
+        self._attr_name = "Battery - reserve"
+        self._attr_device_class = NumberDeviceClass.BATTERY
+        self._attr_entity_category = EntityCategory.CONFIG
+        self._attr_native_unit_of_measurement = "%"
+        self._attr_mode = NumberMode.BOX
+        self._attr_max_value = 100
+        self._attr_min_value = 0
+        super().__init__(coordinator)
+
+    @property
+    def native_value(self):
+        return self.coordinator.config_soc_reserve
+
+    async def async_set_native_value(self, value: float):
+        self.coordinator.config_soc_reserve = int(value)
+        self.update_options(self.coordinator.config_soc_reserve)
         self.async_write_ha_state()
 
 class ChargePowerNumberEntity(EnergyManagementRestoreNumber):
