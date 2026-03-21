@@ -102,6 +102,7 @@ class CoordinatorData:
             self.compensation_rate[dt.astimezone(self.zone_info)] = v[1]
             self.spot_rate[dt.astimezone(self.zone_info)] = v[2]
         self.mean /= len(self.today)
+        self.forecast: dict[datetime, float | int] = {}
 
 class Coordinator(DataUpdateCoordinator[CoordinatorData]):
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry[Coordinator]):
@@ -365,10 +366,13 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
             if self._energy_entries:
                 production = self._energy_entries.setdefault("solar", {})
                 if (solar_entries := production.get("forecast")) and (forecast_platforms := await async_get_energy_platforms(self.hass)):
+                    y = today - TIME_DAY
+                    t = today + TIME_DAY
                     for solar_entry_id in solar_entries:
-                        if (solar_entry := self.hass.config_entries.async_get_entry(solar_entry_id)) and solar_entry is not None and solar_entry.domain in forecast_platforms and (forecast := await forecast_platforms[solar_entry.domain](self.hass, solar_entry_id)) and (wh_hours := forecast["wh_hours"]):
+                        if (solar_entry := self.hass.config_entries.async_get_entry(solar_entry_id)) and solar_entry is not None and solar_entry.domain in forecast_platforms and (forecast := await forecast_platforms[solar_entry.domain](self.hass, solar_entry_id)) and (wh_hours := {i: v for k, v in forecast["wh_hours"].items() if (i := datetime.fromisoformat(k)) is not None and y <= i.astimezone(tzn).date() <= t}):
+                            self._data.forecast = wh_hours
                             for k in self.forecast.keys():
-                                if (i := k.isoformat()) and (wh_hour := wh_hours.get(i)) is not None and (q := (k + TIME_QOUR).isoformat() in wh_hours or (k - TIME_QOUR).isoformat() in wh_hours) is not None and (d := q or (k + TIME_DOUR).isoformat() in wh_hours or (k - TIME_DOUR).isoformat() in wh_hours) is not None and (f := wh_hour / 1000 / ((1 if q else 2) if d else 4)):
+                                if (wh_hour := wh_hours.get(k)) is not None and (q := (k + TIME_QOUR).isoformat() in wh_hours or (k - TIME_QOUR).isoformat() in wh_hours) is not None and (d := q or (k + TIME_DOUR).isoformat() in wh_hours or (k - TIME_DOUR).isoformat() in wh_hours) is not None and (f := wh_hour / 1000 / ((1 if q else 2) if d else 4)):
                                     self.forecast[k] = f
                                     _LOGGER.debug(f"Solar forecast of {solar_entry_id} for {k} ({wh_hour}): {f}")
                                     if not q:
