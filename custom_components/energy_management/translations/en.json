@@ -12,6 +12,7 @@
           "compensation_fee": "Market fee - sell [CZK/kWh]",
           "capacity": "Capacity [kWh]",
           "amortization": "Amortization [CZK/kWh]",
+          "battery": "Battery level",
           "battery_entity_ids": "Battery entities",
           "exclude_entity_ids": "Exclude entities",
           "import_ids": "Import entities",
@@ -20,6 +21,7 @@
         },
         "data_description": {
           "tariff": "AKU8V6, EVV1, .. or region;RC_command",
+          "battery": "How to determine battery level",
           "battery_entity_ids": "Fill in only if necessary",
           "exclude_entity_ids": "Entities that will not be used for calculating consumption"
         },
@@ -52,6 +54,7 @@
           "compensation_fee": "Market fee - sell [CZK/kWh]",
           "capacity": "Capacity [kWh]",
           "amortization": "Amortization [CZK/kWh]",
+          "battery": "Battery level",
           "battery_entity_ids": "Battery entities",
           "exclude_entity_ids": "Exclude entities",
           "import_ids": "Import entities",
@@ -60,6 +63,7 @@
         },
         "data_description": {
           "tariff": "AKU8V6, EVV1, .. or region;RC_command",
+          "battery": "How to determine battery level",
           "battery_entity_ids": "Fill in only if necessary",
           "exclude_entity_ids": "Enter entities that will not be used for calculating consumption"
         },
@@ -85,6 +89,12 @@
         "cez": "ČEZ Distribuce, a.s.",
         "egd": "EG.D, s.r.o.",
         "pre": "PREdistribuce, a. s."
+      } 
+    },
+    "battery": {
+      "options": {
+        "min": "Minimum",
+        "avg": "Average"
       } 
     }
   },

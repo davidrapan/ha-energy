@@ -12,6 +12,7 @@
           "compensation_fee": "Poplatek služby obchodu - prodej [CZK/kWh]",
           "capacity": "Kapacita [kWh]",
           "amortization": "Amortizace [CZK/kWh]",
+          "battery": "Úroveň baterie",
           "battery_entity_ids": "Entity baterie",
           "exclude_entity_ids": "Vyloučené entity",
           "import_ids": "Entity výkonu importu",
@@ -20,6 +21,7 @@
         },
         "data_description": {
           "tariff": "AKU8V6, EVV1, .. nebo region;HDO_povel",
+          "battery": "Jakým způsobem určit úroveň baterie",
           "battery_entity_ids": "Vyplnit jen v případě potřeby",
           "exclude_entity_ids": "Zadejte entity, které nebudou použity při výpočtu spotřeby"
         },
@@ -52,6 +54,7 @@
           "compensation_fee": "Poplatek služby obchodu - prodej [CZK/kWh]",
           "capacity": "Kapacita [kWh]",
           "amortization": "Amortizace [CZK/kWh]",
+          "battery": "Úroveň baterie",
           "battery_entity_ids": "Entity baterie",
           "exclude_entity_ids": "Vyloučené entity",
           "import_ids": "Entity výkonu importu",
@@ -60,6 +63,7 @@
         },
         "data_description": {
           "tariff": "AKU8V6, EVV1, .. nebo region;HDO_povel",
+          "battery": "Jakým způsobem určit úroveň baterie",
           "battery_entity_ids": "Vyplnit jen v případě potřeby",
           "exclude_entity_ids": "Zadejte entity, které nebudou použity při výpočtu spotřeby"
         },
@@ -85,6 +89,12 @@
         "cez": "ČEZ Distribuce, a.s.",
         "egd": "EG.D, s.r.o.",
         "pre": "PREdistribuce, a. s."
+      } 
+    },
+    "battery": {
+      "options": {
+        "min": "Minimum",
+        "avg": "Průměr"
       } 
     }
   },

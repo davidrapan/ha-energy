@@ -18,7 +18,7 @@ _LOGGER = getLogger(__name__)
 SUGGESTED_VALUE = "suggested_value"
 
 DATA_SCHEMA = vol.Schema({
-    vol.Required("area", default = "CEZ", description = {SUGGESTED_VALUE: "CEZ"}): selector.SelectSelector(selector.SelectSelectorConfig(options = ["cez", "egd", "pre"], mode = "dropdown", translation_key = "area")),
+    vol.Required("area", default = "cez", description = {SUGGESTED_VALUE: "cez"}): selector.SelectSelector(selector.SelectSelectorConfig(options = ["cez", "egd", "pre"], mode = "dropdown", translation_key = "area")),
     vol.Required("rate", default = "D57d", description = {SUGGESTED_VALUE: "D57d"}): selector.SelectSelector(selector.SelectSelectorConfig(options = ["D01d", "D02d", "D25d", "D26d", "D27d", "D35d", "D45d", "D56d", "D57d", "D61d"], mode = "dropdown")),
     vol.Required("tariff", default = "EVV1", description = {SUGGESTED_VALUE: "EVV1"}): str,
     vol.Required("spot_hourly", default = False, description = {SUGGESTED_VALUE: False}): bool,
@@ -33,6 +33,7 @@ DATA_SCHEMA = vol.Schema({
     vol.Required("compensation_fee", default = 0.4, description = {SUGGESTED_VALUE: 0.4}): vol.Coerce(float),
     vol.Required("capacity", default = 9.7, description = {SUGGESTED_VALUE: 9.7}): vol.Coerce(float),
     vol.Required("amortization", default = 2.0, description = {SUGGESTED_VALUE: 2.0}): vol.Coerce(float),
+    vol.Required("battery", default = "avg", description = {SUGGESTED_VALUE: "min"}): selector.SelectSelector(selector.SelectSelectorConfig(options = ["min", "avg"], mode = "dropdown", translation_key = "battery")),
     vol.Optional("battery_entity_ids", description = {SUGGESTED_VALUE: None}): selector.EntitySelector(selector.EntitySelectorConfig(device_class = SensorDeviceClass.BATTERY, multiple = True)),
     vol.Optional("exclude_entity_ids", description = {SUGGESTED_VALUE: None}): selector.EntitySelector(selector.EntitySelectorConfig(device_class = SensorDeviceClass.ENERGY, multiple = True)),
     vol.Optional("import_ids", description = {SUGGESTED_VALUE: None}): selector.EntitySelector(selector.EntitySelectorConfig(device_class = SensorDeviceClass.POWER, multiple = True)),

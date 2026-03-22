@@ -226,6 +226,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
         self.config_compensation_fee = self.config_entry.options.get("compensation_fee", 0.4)
         self.config_capacity = self.config_entry.options.get("capacity", 9.7)
         self.config_amortization = self.config_entry.options.get("amortization", 2.0)
+        self.config_battery = self.config_entry.options.get("battery", "min")
         self.config_battery_entity_ids = self.config_entry.options.get("battery_entity_ids", [])
         self.config_exclude_entity_ids = self.config_entry.options.get("exclude_entity_ids", [])
         self.config_import_ids = self.config_entry.options.get("import_ids")
@@ -444,7 +445,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                     _LOGGER.debug(f"Consumption statistics error: {common.strepr(e)}")
                 try:
                     if battery_soc and (stats := await recorder.async_add_executor_job(_get_significant_states_with_session, self.hass, self.now, battery_soc)):
-                        self.battery = sum(map(lambda i: float(stats[i][-1]["s"]), stats)) / len(stats)
+                        self.battery = min(map(lambda i: float(stats[i][-1]["s"]), stats)) if self.config_battery == "min" else (sum(map(lambda i: float(stats[i][-1]["s"]), stats)) / len(stats))
                 except Exception as e:
                     _LOGGER.debug(f"Last battery state error: {common.strepr(e)}")
             if self.battery is not None and self.consumption and next(iter(self.consumption.values())):
