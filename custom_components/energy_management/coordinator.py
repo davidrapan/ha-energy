@@ -4,6 +4,7 @@ import asyncio
 import itertools
 
 from typing import Any
+from pathlib import Path
 from operator import add
 from decimal import Decimal
 from functools import reduce
@@ -12,6 +13,7 @@ from zoneinfo import ZoneInfo
 from datetime import datetime, timedelta
 from collections.abc import AsyncGenerator
 
+import aiofiles
 import sqlalchemy
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -299,22 +301,54 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                 self.today_consumption.clear()
                 self.expected_consumption.clear()
                 rates_params = self._get_rates_params(self.now)
-                async for k, i, o, v in get_rates(**rates_params):
-                    _LOGGER.debug(f"Rate at {k}: {i}, {o}, {v}")
-                    l_date = k.astimezone(tzn).date()
-                    if l_date == today - TIME_DAY:
-                        yesterday_data[k] = (i, o, v)
-                    else:
-                        self.forecast[k] = 0
-                        self.production[k] = None
-                        self.consumption[k] = None
-                        self.consumption_max[k] = None
-                    if l_date == today:
-                        today_data[k] = (i, o, v)
-                        self.today_consumption[k] = None
-                        self.expected_consumption[k] = None
-                    elif l_date == today + TIME_DAY:
-                        tomorrow_data[k] = (i, o, v)
+                Path(f"{self.hass.config.config_dir}/energy_management").mkdir(parents=False, exist_ok=True)
+                path = self.hass.config.path(f"{self.hass.config.config_dir}/energy_management/ote")
+                try:
+                    cache = []
+                    async for k, i, o, v in get_rates(**rates_params):
+                        _LOGGER.debug(f"Rate at {k}: {i}, {o}, {v}")
+                        cache.append(f"{k.isoformat()} {i} {o} {v}")
+                        l_date = k.astimezone(tzn).date()
+                        if l_date == today - TIME_DAY:
+                            yesterday_data[k] = (i, o, v)
+                        else:
+                            self.forecast[k] = 0
+                            self.production[k] = None
+                            self.consumption[k] = None
+                            self.consumption_max[k] = None
+                        if l_date == today:
+                            today_data[k] = (i, o, v)
+                            self.today_consumption[k] = None
+                            self.expected_consumption[k] = None
+                        elif l_date == today + TIME_DAY:
+                            tomorrow_data[k] = (i, o, v)
+                    async with aiofiles.open(path, "w") as f:
+                        for c in cache:
+                            await f.write(f"{c}\n")
+                except Exception as e:
+                    _LOGGER.exception(f"Rates not availabe: {common.strepr(e)}")
+                    async with aiofiles.open(path) as f:
+                        for l in (await f.read()).splitlines():
+                            k, i, o, v = l.split(' ')
+                            k = datetime.fromisoformat(k)
+                            i = Decimal(i)
+                            o = Decimal(o)
+                            v = Decimal(v)
+                            _LOGGER.debug(f"Rate at {k}: {i}, {o}, {v}")
+                            l_date = k.astimezone(tzn).date()
+                            if l_date == today - TIME_DAY:
+                                yesterday_data[k] = (i, o, v)
+                            else:
+                                self.forecast[k] = 0
+                                self.production[k] = None
+                                self.consumption[k] = None
+                                self.consumption_max[k] = None
+                            if l_date == today:
+                                today_data[k] = (i, o, v)
+                                self.today_consumption[k] = None
+                                self.expected_consumption[k] = None
+                            elif l_date == today + TIME_DAY:
+                                tomorrow_data[k] = (i, o, v)
                 if get_fix_rates := get_function(self._session, self.config_area, self.config_rate, self.config_tariff, "" if not self.config_spot_hourly else "Hourly", (self.config_cost_fee, self.config_compensation_fee), self.hass.config.country + "-fix", self.hass.config.currency)[0] if self.config_fix_t1_id else {}:
                     async for k, i, o, v in get_fix_rates(**rates_params):
                         _LOGGER.debug(f"Fix at {k}: {i}, {o}, {v}")
