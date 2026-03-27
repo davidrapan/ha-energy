@@ -243,7 +243,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
         self.config_coefficient = self.config_entry.options.get("coefficient", 1.5)
         self.config_coefficient_strategy = self.config_entry.options.get("coefficient_strategy", 1.2)
         self.config_consumption_strategy = self.config_entry.options.get("consumption_strategy", 30)
-        self.config_now_strategy = self.config_entry.options.get("now_strategy", "daily_max")
+        self.config_now_strategy = self.config_entry.options.get("now_strategy", "auto")
         _LOGGER.debug(f"Area: {self.config_area}, rate: {self.config_rate}, tariff: {self.config_tariff}, spot_hourly: {self.config_spot_hourly}, cost_fee: {self.config_cost_fee}, compensation_fee: {self.config_compensation_fee}, capacity: {self.config_capacity}, amortization: {self.config_amortization}, battery_entity_id: {self.config_battery_entity_ids}, exclude_entity_ids {self.config_exclude_entity_ids}, key: {"***" if self.config_key else "Empty"}")
         try:
             self._energy_entries: dict[str, dict[str, list[str] | dict[str, str | None]]] = {}
@@ -326,7 +326,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                         for c in cache:
                             await f.write(f"{c}\n")
                 except Exception as e:
-                    _LOGGER.exception(f"Rates not availabe: {common.strepr(e)}")
+                    _LOGGER.exception(f"Updated rates not availabe: {common.strepr(e)}")
                     async with aiofiles.open(path) as f:
                         for l in (await f.read()).splitlines():
                             k, i, o, v = l.split(' ')
@@ -487,10 +487,11 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                     rats = {k: v for k, v in self._data.rates_full.items() if k >= self.now}
                     rmin = min(rats.values())
                     rang = float(max(rats.values()) - rmin)
+                    strt = ("daily_max" if self.optimization and not (self.optimization[self.now][4] and self._data.compensation_rate[self.now] >= 0) else "this_hour_max") if self.config_now_strategy == "auto" else self.config_now_strategy
                     json = {
                         "rate": [(float(self._data.rates_full[k]), float(self._data.compensation_rate[k])) for k in rats.keys()],
                         "production": [self.forecast[k] for k in rats.keys()],
-                        "consumption": ([self.consumption_max_max * (1 + float(rats[self.now] - rmin) * (self.config_coefficient - 1) / rang) if rang > 0 else 1] if self.config_now_strategy == "daily_max" else [(c if (c := (self.consumption_max.get(self.now) if self.config_now_strategy == "this_hour_max" else self.consumption.get(self.now))) and c >= 0 else self.consumption_max_max) * (1 + float(rats[self.now] - rmin) * (self.config_coefficient - 1) / rang) if rang > 0 else 1]) + [(c if (c := self.consumption.get(k)) and c >= 0 else self.consumption_mean) * q for k in rats.keys() if k > self.now and (q := (1 + float(rats[k] - rmin) * (self.config_coefficient_strategy - 1) / rang) if rang > 0 else 1) is not None],
+                        "consumption": ([self.consumption_max_max * (1 + float(rats[self.now] - rmin) * (self.config_coefficient - 1) / rang) if rang > 0 else 1] if strt == "daily_max" else [(c if (c := (self.consumption_max.get(self.now) if strt == "this_hour_max" else self.consumption.get(self.now))) and c >= 0 else self.consumption_max_max) * (1 + float(rats[self.now] - rmin) * (self.config_coefficient - 1) / rang) if rang > 0 else 1]) + [(c if (c := self.consumption.get(k)) and c >= 0 else self.consumption_mean) * q for k in rats.keys() if k > self.now and (q := (1 + float(rats[k] - rmin) * (self.config_coefficient_strategy - 1) / rang) if rang > 0 else 1) is not None],
                         "constraints": {"soc": self.battery / 100, "grid_power": i / 4 if self.config_import_ids and (i := sum(float(v.state) for id in self.config_import_ids if (v := self.hass.states.get(id)) and v.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE))) else 99999.9, "sell_power": float(e.state) / 4 if self.config_export_id and (e := self.hass.states.get(self.config_export_id)) and e.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else 99999.9, "charge_power": self.config_charge_power / 4, "discharge_power": self.config_discharge_power / 4, "soc_min": self.config_soc_min / 100, "soc_max": (self.config_soc_max if self.battery_max > 98 else 100) / 100, "soc_reserve": (self.config_soc_min if self._data.tomorrow else self.config_soc_reserve) / 100, "capacity": self.config_capacity, "amortization": self.config_amortization}
                     }
                     if (r := await common.pg(self._session, URL, json = json, headers = { "X-API-Key": self.config_key })) is not None:
