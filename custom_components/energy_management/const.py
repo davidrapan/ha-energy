@@ -94,7 +94,7 @@ SQL_QUERY_MYSQL_PARAMS = {
 SQL_QUERY_SQLITE_PARAMS = {
     "a_s_dt": "",
     "datetime": "strftime('%Y-%m-%d %H:%M:%S', t.start_ts, 'unixepoch', '{offset}')",
-    "date_sub": "strftime('%s', 'now', '-{days} day', '{offset}')",
+    "date_sub": "strftime('%Y-%m-%d %H:%M:%S', 'now', '-{days} day', '{offset}')",
     "hour_of_day": "CAST(strftime('%H', start_ts, 'unixepoch', '{offset}') AS INTEGER)",
     "day_of_week": "CAST(strftime('%u', start_ts, 'unixepoch', '{offset}') AS INTEGER) - 1",
     "current_timestamp": "strftime('%Y-%m-%d %H:%M:%S', 'now', '{offset}')",
@@ -118,5 +118,5 @@ SQL_QUERY_BATTERY_MYSQL_PARAMS = {
 
 SQL_QUERY_BATTERY_SQLITE_PARAMS = {
     "datetime": "strftime('%Y-%m-%d %H:%M:%S', t.last_changed_ts, 'unixepoch', '{offset}')",
-    "date_sub": "strftime('%s', 'now', '-{days} day', '{offset}')",
+    "date_sub": "strftime('%Y-%m-%d %H:%M:%S', 'now', '-{days} day', '{offset}')",
 }
