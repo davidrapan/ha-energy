@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import asyncio
 import itertools
 
@@ -17,6 +18,7 @@ import aiofiles
 import sqlalchemy
 
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session, scoped_session, sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine, async_scoped_session, async_sessionmaker, AsyncSession
 
 from homeassistant.util.dt import utcnow
@@ -44,23 +46,32 @@ from .providers import get_function
 
 _LOGGER = getLogger(__name__)
 
-async def _get_sessionmaker(hass: HomeAssistant) -> async_scoped_session[AsyncSession] | None:
+async def _get_sessionmaker(hass: HomeAssistant) -> async_scoped_session[AsyncSession] | scoped_session[Session] | None:
     db_url = resolve_db_url(hass, None)
-    if db_url.startswith("mysql") and not db_url.startswith("mysql+aiomysql"):
-        db_url = db_url.replace("mysql", "mysql+aiomysql")
-    if db_url.startswith("sqlite") and not db_url.startswith("sqlite+aiosqlite"):
-        db_url = db_url.replace("sqlite", "sqlite+aiosqlite")
-    if db_url.startswith("postgresql") and not db_url.startswith("postgresql+asyncpg"):
-        db_url = db_url.replace("postgresql", "postgresql+asyncpg")
     try:
-        maker = async_scoped_session(async_sessionmaker(bind = create_async_engine(db_url, future = True), future = True), scopefunc = asyncio.current_task)
-        async with maker() as session:
-            await session.execute(sqlalchemy.text("SELECT 1;"))
+        if "greenlet" in sys.modules:
+            if db_url.startswith("mysql") and not db_url.startswith("mysql+aiomysql"):
+                db_url = db_url.replace("mysql", "mysql+aiomysql")
+            if db_url.startswith("sqlite") and not db_url.startswith("sqlite+aiosqlite"):
+                db_url = db_url.replace("sqlite", "sqlite+aiosqlite")
+            if db_url.startswith("postgresql") and not db_url.startswith("postgresql+asyncpg"):
+                db_url = db_url.replace("postgresql", "postgresql+asyncpg")
+            maker = async_scoped_session(async_sessionmaker(bind = create_async_engine(db_url, future = True), future = True), scopefunc = asyncio.current_task)
+            async with maker() as session:
+                await session.execute(sqlalchemy.text("SELECT 1;"))
+            return maker
+
+        def _get_session_maker_for_db_url() -> scoped_session[Session] | None:
+            maker = scoped_session(sessionmaker(bind = sqlalchemy.create_engine(db_url, future = True), future = True))
+            with maker() as session:
+                session.execute(sqlalchemy.text("SELECT 1;"))
+            return maker
+
+        return await hass.async_add_executor_job(_get_session_maker_for_db_url)
+
     except SQLAlchemyError as err:
         _LOGGER.error( "Couldn't connect using %s DB_URL: %s", redact_credentials(db_url), redact_credentials(str(err)))
         return None
-    else:
-        return maker
 
 def _compile_statistics(hass: HomeAssistant, dt: datetime):
     with session_scope(hass = hass, read_only = True) as session:
@@ -192,28 +203,67 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                             c.setdefault("to_price", []).append(energy_price)
 
     async def _execute_simple(self, query_str: str):
-        async with self._maker() as session:
-            try:
-                result = await session.execute(generate_lambda_stmt(query_str))
-            except SQLAlchemyError as e:
-                _LOGGER.error(f"Error executing query {query_str}: {redact_credentials(common.strepr(e))}")
-                await session.rollback()
+        if isinstance(self._maker, async_scoped_session):
+            async with self._maker() as session:
+                try:
+                    result = await session.execute(generate_lambda_stmt(query_str))
+                except SQLAlchemyError as e:
+                    _LOGGER.error(f"Error executing query {query_str}: {redact_credentials(common.strepr(e))}")
+                    await session.rollback()
+                else:
+                    _LOGGER.debug(f"Query: {query_str}")
+                    return result.scalar()
+        else:
+            def _sync_execute():
+                with self._maker() as session:
+                    try:
+                        result = session.execute(generate_lambda_stmt(query_str))
+                    except SQLAlchemyError as e:
+                        _LOGGER.error(f"Error executing query {query_str}: {redact_credentials(common.strepr(e))}")
+                        session.rollback()
+                    else:
+                        _LOGGER.debug(f"Query: {query_str}")
+                        return result.scalar()
+
+            if self._use_database_executor:
+                return await get_instance(self.hass).async_add_executor_job(_sync_execute)
             else:
-                _LOGGER.debug(f"Query: {query_str}")
-                return result.scalar()
+                return await self.hass.async_add_executor_job(_sync_execute)
 
     async def _execute(self, query_str: str) -> AsyncGenerator[tuple[datetime, dict[str | Any, Any | None] | dict], None]:
-        async with self._maker() as session:
-            try:
-                result = await session.execute(generate_lambda_stmt(query_str))
-            except SQLAlchemyError as e:
-                _LOGGER.error(f"Error executing query {query_str}: {redact_credentials(common.strepr(e))}")
-                await session.rollback()
+        mappings = None
+
+        if isinstance(self._maker, async_scoped_session):
+            async with self._maker() as session:
+                try:
+                    result = await session.execute(generate_lambda_stmt(query_str))
+                except SQLAlchemyError as e:
+                    _LOGGER.error(f"Error executing query {query_str}: {redact_credentials(common.strepr(e))}")
+                    await session.rollback()
+                else:
+                    _LOGGER.debug(f"Query: {query_str}")
+                    mappings = result.mappings()
+        else:
+            def _sync_execute():
+                with self._maker() as session:
+                    try:
+                        result = session.execute(generate_lambda_stmt(query_str))
+                    except SQLAlchemyError as e:
+                        _LOGGER.error(f"Error executing query {query_str}: {redact_credentials(common.strepr(e))}")
+                        session.rollback()
+                    else:
+                        _LOGGER.debug(f"Query: {query_str}")
+                        return result.mappings()
+
+            if self._use_database_executor:
+                mappings = await get_instance(self.hass).async_add_executor_job(_sync_execute)
             else:
-                _LOGGER.debug(f"Query: {query_str}")
-                for k, v in itertools.zip_longest(self.consumption.keys(), [m for m in result.mappings() for _ in range(4)], fillvalue = {}):
-                    if k:
-                        yield k, {vk: vv / 4 if (vv := v.get(vk)) is not None else None for vk in v.keys()}
+                mappings = await self.hass.async_add_executor_job(_sync_execute)
+
+        if mappings:
+            for k, v in itertools.zip_longest(self.consumption.keys(), [m for m in mappings for _ in range(4)], fillvalue = {}):
+                if k:
+                    yield k, {vk: vv / 4 if (vv := v.get(vk)) is not None else None for vk in v.keys()}
 
     async def _async_setup(self) -> None:
         await super()._async_setup()
@@ -252,6 +302,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
             if self._manager.data:
                 await self._get_energy_entries()
             self._maker = await _get_sessionmaker(self.hass)
+            self._use_database_executor = self._maker is not None and get_instance(self.hass).dialect_name == SupportedDialect.SQLITE
         except TimeoutError:
             raise
         except Exception as e:
@@ -277,7 +328,10 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
         if self._deferred_refresh:
             self._deferred_refresh()
             self._deferred_refresh = None
-        await (await self._maker.connection()).engine.dispose()
+        if isinstance(self._maker, async_scoped_session):
+            await (await self._maker.connection()).engine.dispose()
+        else:
+            self._maker.connection().engine.dispose()
 
     def _get_rates_params(self, dt: datetime) -> dict[str, datetime | Decimal]:
         return {"dt": dt} | ({"T1": Decimal(t1.state if t1.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else "0")} if self.config_fix_t1_id and (t1 := self.hass.states.get(self.config_fix_t1_id)) else {}) | ({"T2": Decimal(t2.state if t2.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else "0")} if self.config_fix_t2_id and (t2 := self.hass.states.get(self.config_fix_t2_id)) else {})
@@ -455,8 +509,8 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                         self.cost.clear()
                         async for k, v in self._execute(query_str):
                             _LOGGER.debug(f"Query result {k}: {v}")
-                            self.consumption[k] = c if (c := v.get("mean")) is not None else self.consumption.get(k - TIME_DAY)
-                            self.consumption_max[k] = c if (c := v.get("maximum")) is not None else self.consumption_max.get(k - TIME_DAY)
+                            self.consumption[k] = c if (c := v.get("mean")) is not None else self.consumption.get(k - TIME_DAY, 0.5)
+                            self.consumption_max[k] = c if (c := v.get("maximum")) is not None else self.consumption_max.get(k - TIME_DAY, 1.0)
                             self.today_consumption[k] = v.get("consumption")
                             self.expected_consumption[k] = c if (c := self.today_consumption[k]) is not None else self.consumption[k] if k.astimezone(tzn).date() == today else None
                             self.production[k] = v.get("production")
