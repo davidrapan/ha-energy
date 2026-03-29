@@ -187,20 +187,34 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                     if energy_to := source.get("stat_energy_to"):
                         t.append(energy_to)
                 case "grid":
-                    for flow in source.get("flow_from", []):
-                        if energy_from := flow.get("stat_energy_from"):
+                    if "stat_energy_from" in source:
+                        if energy_from := source.get("stat_energy_from"):
                             f.append(energy_from)
                             if cost := sensors.get(energy_from):
                                 c.setdefault("cost", []).append(cost)
-                        if energy_price := flow.get("entity_energy_price"):
+                        if energy_price := source.get("entity_energy_price"):
                             c.setdefault("from_price", []).append(energy_price)
-                    for flow in source.get("flow_to", []):
-                        if energy_to := flow.get("stat_energy_to"):
+                        if energy_to := source.get("stat_energy_to"):
                             t.append(energy_to)
                             if compensation := sensors.get(energy_to):
                                 c.setdefault("compensation", []).append(compensation)
-                        if energy_price := flow.get("entity_energy_price"):
+                        if energy_price := source.get("entity_energy_price_export"):
                             c.setdefault("to_price", []).append(energy_price)
+                    else:
+                        for flow in source.get("flow_from", []):
+                            if energy_from := flow.get("stat_energy_from"):
+                                f.append(energy_from)
+                                if cost := sensors.get(energy_from):
+                                    c.setdefault("cost", []).append(cost)
+                            if energy_price := flow.get("entity_energy_price"):
+                                c.setdefault("from_price", []).append(energy_price)
+                        for flow in source.get("flow_to", []):
+                            if energy_to := flow.get("stat_energy_to"):
+                                t.append(energy_to)
+                                if compensation := sensors.get(energy_to):
+                                    c.setdefault("compensation", []).append(compensation)
+                            if energy_price := flow.get("entity_energy_price"):
+                                c.setdefault("to_price", []).append(energy_price)
 
     async def _execute_simple(self, query_str: str):
         if isinstance(self._maker, async_scoped_session):
