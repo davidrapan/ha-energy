@@ -48,7 +48,7 @@ class BatteryDischargeToGridSensor(EnergyManagementBinarySensorEntity):
 
     def update(self):
         super().update()
-        if not (data := self.coordinator.data):
+        if not (data := self.coordinator.data) or not data.optimization:
             return
         self._attr_extra_state_attributes = {k.isoformat(): v[4] for k, v in data.optimization.items()}
         self._attr_is_on = data.optimization[self.coordinator.data.now][4] and data.compensation_rate[data.now] >= 0
@@ -62,7 +62,7 @@ class SuppressExportSensor(EnergyManagementBinarySensorEntity):
 
     def update(self):
         super().update()
-        if not (data := self.coordinator.data):
+        if not (data := self.coordinator.data) or not data.optimization:
             return
         self._attr_extra_state_attributes = {k.astimezone(self.coordinator.data.zone_info).isoformat(): v < 0 for k, v in data.compensation_rate.items()}
         self._attr_is_on = data.optimization[self.coordinator.data.now][0] > self.coordinator.config_soc_threshold and data.compensation_rate[data.now] < 0
