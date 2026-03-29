@@ -230,7 +230,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
             else:
                 return await self.hass.async_add_executor_job(_sync_execute)
 
-    async def _execute(self, query_str: str) -> AsyncGenerator[tuple[datetime, dict[str | Any, Any | None] | dict], None]:
+    async def _execute(self, query_str: str, time_zone: ZoneInfo) -> AsyncGenerator[tuple[datetime, dict[str | Any, Any | None] | dict], None]:
         mappings = None
 
         if isinstance(self._maker, async_scoped_session):
@@ -260,10 +260,12 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
             else:
                 mappings = await self.hass.async_add_executor_job(_sync_execute)
 
-        if mappings:
-            for k, v in itertools.zip_longest(self.consumption.keys(), [m for m in mappings for _ in range(4)], fillvalue = {}):
+        if mappings and (values := [m for m in mappings for _ in range(4)]):
+            if (f := values[0].get("idx")) is not None and f != 0:
+                values = [{} for _ in range((f - 1) * 4)] + values
+            for k, v in itertools.zip_longest(self.consumption.keys(), values, fillvalue = {}):
                 if k:
-                    yield k, {vk: vv / 4 if (vv := v.get(vk)) is not None else None for vk in v.keys()}
+                    yield k, {vk: vv / 4 if (vv := v.get(vk)) is not None else None for vk in v.keys() if vk != "idx"} if f == 0 or k.astimezone(time_zone).hour == v.get("idx") else {}
 
     async def _async_setup(self) -> None:
         await super()._async_setup()
@@ -507,18 +509,29 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                         self.imported.clear()
                         self.exported.clear()
                         self.cost.clear()
-                        async for k, v in self._execute(query_str):
+                        self.consumption_mean = 0.5
+                        self.consumption_max_max = 1.0
+                        async for k, v in self._execute(query_str, tzn):
                             _LOGGER.debug(f"Query result {k}: {v}")
-                            self.consumption[k] = c if (c := v.get("mean")) is not None else self.consumption.get(k - TIME_DAY, 0.5)
-                            self.consumption_max[k] = c if (c := v.get("maximum")) is not None else self.consumption_max.get(k - TIME_DAY, 1.0)
+                            self.consumption[k] = c if (c := v.get("mean")) is not None else self.consumption.get(k - TIME_DAY)
+                            self.consumption_max[k] = c if (c := v.get("maximum")) is not None else self.consumption_max.get(k - TIME_DAY)
                             self.today_consumption[k] = v.get("consumption")
                             self.expected_consumption[k] = c if (c := self.today_consumption[k]) is not None else self.consumption[k] if k.astimezone(tzn).date() == today else None
                             self.production[k] = v.get("production")
                             self.imported[k] = v.get("imported")
                             self.exported[k] = v.get("exported")
                             self.cost[k] = v.get("cost")
-                        self.consumption_mean = (sum(c) / len(c)) if (c := [v for k, v in self.consumption.items() if k.astimezone(tzn).date() == today and v >= 0]) else 1.0
-                        self.consumption_max_max = max(c) if (c := [v for k, v in self.consumption_max.items() if k.astimezone(tzn).date() == today]) else 2.0
+                            if k.astimezone(tzn).date() == today:
+                                self.consumption_mean = (sum(c) / len(c)) if (c := [v for kk, v in self.consumption.items() if kk <= k and v is not None]) else self.consumption_mean
+                                self.consumption_max_max = max(self.consumption_max[k], self.consumption_max_max) if self.consumption_max[k] is not None else self.consumption_max_max
+                        for k in self.consumption.keys():
+                            if k.astimezone(tzn).date() == today:
+                                if self.consumption[k] is None:
+                                    self.consumption[k] = self.consumption_mean
+                                if self.consumption_max[k] is None:
+                                    self.consumption_max[k] = self.consumption_max_max
+                                if self.expected_consumption[k] is None:
+                                    self.expected_consumption[k] = self.consumption[k]
                         self.cost_today = sum(filter(None, self.cost.values()))
                         self.cost_rate_today = (self.cost_today / imported_sum) if (imported_sum := sum(filter(None, self.imported.values()))) > 0 else None
                         self.cost_today_expected = sum(float(self._data.rates_full[k]) * v for k, v in self.expected_consumption.items() if v is not None)

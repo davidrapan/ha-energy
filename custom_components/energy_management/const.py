@@ -65,6 +65,7 @@ arithmetic AS (
         start_ts
 )
 SELECT
+    arithmetic.hour_of_day AS idx,
     AVG(arithmetic.essential) AS mean,
     MIN(arithmetic.essential) AS minimum,
     MAX(arithmetic.essential) AS maximum,
