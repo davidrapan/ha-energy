@@ -86,6 +86,7 @@
   "selector": {
     "area": {
       "options": {
+        "disabled": "Zakázáno",
         "cez": "ČEZ Distribuce, a.s.",
         "egd": "EG.D, s.r.o.",
         "pre": "PREdistribuce, a. s."

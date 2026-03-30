@@ -84,6 +84,8 @@ async def _get_intervals(s: ClientSession, area: str, rate: str, tariff: str, dt
                 if _all_same(resp):
                     return resp[0]
                 return resp
+            case "pre":
+                return None
     except Exception as e:
         _LOGGER.error(f"Tariff intervals error: {strepr(e)}")
     return None
@@ -98,7 +100,7 @@ def _get_tariff(tariff: tuple[tuple[time, time]] | tuple[tuple[tuple[time, time]
 
 @acache
 async def _get_distribution(s: ClientSession, area: str, rate: str, tariff: str, dt: datetime) -> tuple[int, Decimal]:
-    return (0 if t == "T1" else -1, RATE[dt.year][""] + RATE[dt.year][area][rate][t]) if (t := _get_tariff(RATE[dt.year][area][rate]["Type"][tariff[-2:]] if "Type" in RATE[dt.year][area][rate] and tariff in TARIFF and RATE[dt.year][area][rate]["Name"] == tariff[:-2] else TARIFF[tariff] if tariff in TARIFF else await _get_intervals(s, area, rate, tariff, dt.date()), dt.weekday(), dt.time())) else (0, RATE[dt.year][""] + RATE[dt.year][area][rate]["T1"])
+    return ((0 if t == "T1" else -1, RATE[dt.year][""] + RATE[dt.year][area][rate][t]) if (t := _get_tariff(RATE[dt.year][area][rate]["Type"][tariff[-2:]] if "Type" in RATE[dt.year][area][rate] and tariff in TARIFF and RATE[dt.year][area][rate]["Name"] == tariff[:-2] else TARIFF[tariff] if tariff in TARIFF else await _get_intervals(s, area, rate, tariff, dt.date()), dt.weekday(), dt.time())) else (0, RATE[dt.year][""] + RATE[dt.year][area][rate]["T1"])) if area != "disabled" else (0, Decimal(0))
 
 @cache
 def _get_distribution_function(s: ClientSession, area: str, rate: str, tariff: str):
