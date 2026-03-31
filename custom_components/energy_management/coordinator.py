@@ -546,6 +546,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                                     self.consumption_max[k] = self.consumption_max_max
                                 if self.expected_consumption[k] is None:
                                     self.expected_consumption[k] = self.consumption[k]
+                        _LOGGER.debug(f"Daily mean: {self.consumption_mean}, top consumption: {self.consumption_max_max}")
                         self.cost_today = sum(filter(None, self.cost.values()))
                         self.cost_rate_today = (self.cost_today / imported_sum) if (imported_sum := sum(filter(None, self.imported.values()))) > 0 else None
                         self.cost_today_expected = sum(float(self._data.rates_full[k]) * v for k, v in self.expected_consumption.items() if v is not None)
@@ -572,11 +573,11 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                     json = {
                         "rate": [(float(self._data.rates_full[k]), float(self._data.compensation_rate[k])) for k in rats.keys()],
                         "production": [self.forecast[k] for k in rats.keys()],
-                        "consumption": ([self.consumption_max_max * (1 + float(rats[self.now] - rmin) * (self.config_coefficient - 1) / rang) if rang > 0 else 1] if strt == "daily_max" else [(c if (c := (self.consumption_max.get(self.now) if strt == "this_hour_max" else self.consumption.get(self.now))) and c >= 0 else self.consumption_max_max) * (1 + float(rats[self.now] - rmin) * (self.config_coefficient - 1) / rang) if rang > 0 else 1]) + [(c if (c := self.consumption.get(k)) and c >= 0 else self.consumption_mean) * q for k in rats.keys() if k > self.now and (q := (1 + float(rats[k] - rmin) * (self.config_coefficient_strategy - 1) / rang) if rang > 0 else 1) is not None],
+                        "consumption": (([self.consumption_max_max * (1 + float(rats[self.now] - rmin) * (self.config_coefficient - 1) / rang) if rang > 0 else 1] if strt == "daily_max" else [(c if (c := (self.consumption_max.get(self.now) if strt == "this_hour_max" else self.consumption.get(self.now))) and c >= 0 else self.consumption_max_max) * (1 + float(rats[self.now] - rmin) * (self.config_coefficient - 1) / rang) if rang > 0 else 1]) + [(c if (c := self.consumption.get(k)) and c >= 0 else self.consumption_mean) * q for k in rats.keys() if k > self.now and (q := (1 + float(rats[k] - rmin) * (self.config_coefficient_strategy - 1) / rang) if rang > 0 else 1) is not None]) if self.config_area != "disabled" else [0 for _ in rats.keys()],
                         "constraints": {"soc": self.battery / 100, "grid_power": i / 4 if self.config_import_ids and (i := sum(float(v.state) for id in self.config_import_ids if (v := self.hass.states.get(id)) and v.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE))) else 99999.9, "sell_power": float(e.state) / 4 if self.config_export_id and (e := self.hass.states.get(self.config_export_id)) and e.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else 99999.9, "charge_power": self.config_charge_power / 4, "discharge_power": self.config_discharge_power / 4, "soc_min": self.config_soc_min / 100, "soc_max": (self.config_soc_max if self.battery_max > 98 else 100) / 100, "soc_reserve": (self.config_soc_min if self._data.tomorrow else self.config_soc_reserve) / 100, "capacity": self.config_capacity, "amortization": self.config_amortization}
                     }
                     if (r := await common.pg(self._session, URL, json = json, headers = { "X-API-Key": self.config_key })) is not None:
-                        _LOGGER.debug(f"Optimization of {json}: {r}")
+                        _LOGGER.debug(f"Optimization ({strt}: {self.consumption_max_max}) of {json}: {r}")
                         self.predicted_cost = float(r[0][1])
                         self.predicted_amortization = float(r[0][3])
                         self.optimization = {k: v for k, v in zip(rats.keys(), r[1])}
