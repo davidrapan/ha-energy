@@ -359,6 +359,8 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
             self.now = common.dt_block(now)
             local = self.now.astimezone(tzn)
             today = local.date()
+            yesterday = today - TIME_DAY
+            tomorrow = today + TIME_DAY
             get_rates, tomorrow_available = get_function(self._session, self.config_area, self.config_rate, self.config_tariff, "" if not self.config_spot_hourly else "Hourly", (self.config_cost_fee, self.config_compensation_fee), self.hass.config.country, self.hass.config.currency)
             if not self.data or not self.data.tomorrow and tomorrow_available(self.now):
                 yesterday_data: dict[datetime, tuple[Decimal, Decimal, Decimal]] = {}
@@ -379,7 +381,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                         _LOGGER.debug(f"Rate at {k}: {i}, {o}, {v}")
                         cache.append(f"{k.isoformat()} {i} {o} {v}")
                         l_date = k.astimezone(tzn).date()
-                        if l_date == today - TIME_DAY:
+                        if l_date == yesterday:
                             yesterday_data[k] = (i, o, v)
                         else:
                             self.forecast[k] = 0
@@ -390,7 +392,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                             today_data[k] = (i, o, v)
                             self.today_consumption[k] = None
                             self.expected_consumption[k] = None
-                        elif l_date == today + TIME_DAY:
+                        elif l_date == tomorrow:
                             tomorrow_data[k] = (i, o, v)
                     async with aiofiles.open(path, "w") as f:
                         for c in cache:
@@ -406,7 +408,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                             v = Decimal(v)
                             _LOGGER.debug(f"Rate at {k}: {i}, {o}, {v}")
                             l_date = k.astimezone(tzn).date()
-                            if l_date == today - TIME_DAY:
+                            if l_date == yesterday:
                                 yesterday_data[k] = (i, o, v)
                             else:
                                 self.forecast[k] = 0
@@ -417,13 +419,13 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                                 today_data[k] = (i, o, v)
                                 self.today_consumption[k] = None
                                 self.expected_consumption[k] = None
-                            elif l_date == today + TIME_DAY:
+                            elif l_date == tomorrow:
                                 tomorrow_data[k] = (i, o, v)
                 if get_fix_rates := get_function(self._session, self.config_area, self.config_rate, self.config_tariff, "" if not self.config_spot_hourly else "Hourly", (self.config_cost_fee, self.config_compensation_fee), self.hass.config.country + "-fix", self.hass.config.currency)[0] if self.config_fix_t1_id else {}:
                     async for k, i, o, v in get_fix_rates(**rates_params):
                         _LOGGER.debug(f"Fix at {k}: {i}, {o}, {v}")
                         l_date = k.astimezone(tzn).date()
-                        if l_date == today - TIME_DAY:
+                        if l_date == yesterday:
                             if k in yesterday_data:
                                 yesterday_data[k] = (i,) + yesterday_data[k][1:]
                             #else:
@@ -440,7 +442,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                             #    today_data[k] = (i, o, v)
                             #self.today_consumption[k] = None
                             #self.expected_consumption[k] = None
-                        elif l_date == today + TIME_DAY:
+                        elif l_date == tomorrow:
                             if k in tomorrow_data:
                                 tomorrow_data[k] = (i,) + tomorrow_data[k][1:]
                             #else:
@@ -471,10 +473,8 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
             if self._energy_entries:
                 production = self._energy_entries.setdefault("solar", {})
                 if (solar_entries := production.get("forecast")) and (forecast_platforms := await async_get_energy_platforms(self.hass)):
-                    y = today - TIME_DAY
-                    t = today + TIME_DAY
                     for solar_entry_id in solar_entries:
-                        if (solar_entry := self.hass.config_entries.async_get_entry(solar_entry_id)) and solar_entry is not None and solar_entry.domain in forecast_platforms and (forecast := await forecast_platforms[solar_entry.domain](self.hass, solar_entry_id)) and (wh_hours := {i: v for k, v in forecast["wh_hours"].items() if (i := datetime.fromisoformat(k)) is not None and y <= i.astimezone(tzn).date() <= t}):
+                        if (solar_entry := self.hass.config_entries.async_get_entry(solar_entry_id)) and solar_entry is not None and solar_entry.domain in forecast_platforms and (forecast := await forecast_platforms[solar_entry.domain](self.hass, solar_entry_id)) and (wh_hours := {i: v for k, v in forecast["wh_hours"].items() if (i := datetime.fromisoformat(k)) is not None and yesterday <= i.astimezone(tzn).date() <= tomorrow}):
                             self._data.forecast = wh_hours
                             for k in self.forecast.keys():
                                 if (wh_hour := wh_hours.get(k)) is not None and (q := (k + TIME_QOUR).isoformat() in wh_hours or (k - TIME_QOUR).isoformat() in wh_hours) is not None and (d := q or (k + TIME_DOUR).isoformat() in wh_hours or (k - TIME_DOUR).isoformat() in wh_hours) is not None and (f := wh_hour / 1000 / ((1 if q else 2) if d else 4)):
@@ -518,7 +518,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                             offset,
                             self.config_consumption_strategy,
                             today.weekday(),
-                            (today + TIME_DAY).weekday()
+                            tomorrow.weekday()
                         )
                         self.imported.clear()
                         self.exported.clear()
@@ -527,15 +527,16 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                         self.consumption_max_max = 1.0
                         async for k, v in self._execute(query_str, tzn):
                             _LOGGER.debug(f"Query result {k}: {v}")
+                            l_date = k.astimezone(tzn).date()
                             self.consumption[k] = c if (c := v.get("mean")) is not None else self.consumption.get(k - TIME_DAY)
                             self.consumption_max[k] = c if (c := v.get("maximum")) is not None else self.consumption_max.get(k - TIME_DAY)
                             self.today_consumption[k] = v.get("consumption")
-                            self.expected_consumption[k] = c if (c := self.today_consumption[k]) is not None else self.consumption[k] if k.astimezone(tzn).date() == today else None
+                            self.expected_consumption[k] = c if (c := self.today_consumption[k]) is not None else self.consumption[k] if l_date == today else None
                             self.production[k] = v.get("production")
                             self.imported[k] = v.get("imported")
                             self.exported[k] = v.get("exported")
                             self.cost[k] = v.get("cost")
-                            if k.astimezone(tzn).date() == today:
+                            if l_date == today:
                                 self.consumption_mean = (sum(c) / len(c)) if (c := [v for kk, v in self.consumption.items() if kk <= k and v is not None]) else self.consumption_mean
                                 self.consumption_max_max = max(self.consumption_max[k], self.consumption_max_max) if self.consumption_max[k] is not None else self.consumption_max_max
                         for k in self.consumption.keys():
@@ -546,7 +547,9 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                                     self.consumption_max[k] = self.consumption_max_max
                                 if self.expected_consumption[k] is None:
                                     self.expected_consumption[k] = self.consumption[k]
-                        _LOGGER.debug(f"Daily mean: {self.consumption_mean}, top consumption: {self.consumption_max_max}")
+                        self.reserve = (sum(c) / len(c)) if (c := [v for kk, v in self.consumption.items() if kk.astimezone(tzn).date() == tomorrow and v is not None]) else 0
+                        self.reserve = r if self._data.forecast and (r := self.reserve - sum([v for kk, v in self._data.forecast.items() if kk.astimezone(tzn).date() == tomorrow and v is not None])) > 0 else 0
+                        _LOGGER.debug(f"Daily mean: {self.consumption_mean}, top consumption: {self.consumption_max_max}, tommorrow reserve needed: {self.reserve}")
                         self.cost_today = sum(filter(None, self.cost.values()))
                         self.cost_rate_today = (self.cost_today / imported_sum) if (imported_sum := sum(filter(None, self.imported.values()))) > 0 else None
                         self.cost_today_expected = sum(float(self._data.rates_full[k]) * v for k, v in self.expected_consumption.items() if v is not None)
@@ -574,7 +577,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                         "rate": [(float(self._data.rates_full[k]), float(self._data.compensation_rate[k])) for k in rats.keys()],
                         "production": [self.forecast[k] for k in rats.keys()],
                         "consumption": (([self.consumption_max_max * (1 + float(rats[self.now] - rmin) * (self.config_coefficient - 1) / rang) if rang > 0 else 1] if strt == "daily_max" else [(c if (c := (self.consumption_max.get(self.now) if strt == "this_hour_max" else self.consumption.get(self.now))) and c >= 0 else self.consumption_max_max) * (1 + float(rats[self.now] - rmin) * (self.config_coefficient - 1) / rang) if rang > 0 else 1]) + [(c if (c := self.consumption.get(k)) and c >= 0 else self.consumption_mean) * q for k in rats.keys() if k > self.now and (q := (1 + float(rats[k] - rmin) * (self.config_coefficient_strategy - 1) / rang) if rang > 0 else 1) is not None]) if self.config_area != "disabled" else [0 for _ in rats.keys()],
-                        "constraints": {"soc": self.battery / 100, "grid_power": i / 4 if self.config_import_ids and (i := sum(float(v.state) for id in self.config_import_ids if (v := self.hass.states.get(id)) and v.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE))) else 99999.9, "sell_power": float(e.state) / 4 if self.config_export_id and (e := self.hass.states.get(self.config_export_id)) and e.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else 99999.9, "charge_power": self.config_charge_power / 4, "discharge_power": self.config_discharge_power / 4, "soc_min": self.config_soc_min / 100, "soc_max": (self.config_soc_max if self.battery_max > 98 else 100) / 100, "soc_reserve": (self.config_soc_min if self._data.tomorrow else self.config_soc_reserve) / 100, "capacity": self.config_capacity, "amortization": self.config_amortization}
+                        "constraints": {"soc": self.battery / 100, "grid_power": i / 4 if self.config_import_ids and (i := sum(float(v.state) for id in self.config_import_ids if (v := self.hass.states.get(id)) and v.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE))) else 99999.9, "sell_power": float(e.state) / 4 if self.config_export_id and (e := self.hass.states.get(self.config_export_id)) and e.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else 99999.9, "charge_power": self.config_charge_power / 4, "discharge_power": self.config_discharge_power / 4, "soc_min": self.config_soc_min / 100, "soc_max": (self.config_soc_max if self.battery_max > 98 else 100) / 100, "soc_reserve": (self.config_soc_min if self._data.tomorrow else (self.config_soc_reserve / min(self.reserve / self.config_capacity * 100, 100) * 100)) / 100, "capacity": self.config_capacity, "amortization": self.config_amortization}
                     }
                     if (r := await common.pg(self._session, URL, json = json, headers = { "X-API-Key": self.config_key })) is not None:
                         _LOGGER.debug(f"Optimization ({strt}: {self.consumption_max_max}) of {json}: {r}")
