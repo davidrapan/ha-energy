@@ -75,7 +75,10 @@ async def _get_sessionmaker(hass: HomeAssistant) -> async_scoped_session[AsyncSe
 
 def _compile_statistics(hass: HomeAssistant, dt: datetime):
     with session_scope(hass = hass, read_only = True) as session:
-        return compile_statistics(hass, session, dt - timedelta.resolution, dt).platform_stats
+        try:
+            return compile_statistics(hass, session, dt - timedelta.resolution, dt, {}).platform_stats
+        except:
+            return compile_statistics(hass, session, dt - timedelta.resolution, dt).platform_stats
 
 def _get_statistics_for_entity(statistics_results: list[StatisticResult], entity_ids: list[str] | str):
     for statistics_result in statistics_results:
