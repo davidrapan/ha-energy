@@ -478,7 +478,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                         if (solar_entry := self.hass.config_entries.async_get_entry(solar_entry_id)) and solar_entry is not None and solar_entry.domain in forecast_platforms and (forecast := await forecast_platforms[solar_entry.domain](self.hass, solar_entry_id)) and (wh_hours := {i: v for k, v in forecast["wh_hours"].items() if (i := datetime.fromisoformat(k)) is not None and yesterday <= i.astimezone(tzn).date() <= tomorrow}):
                             self._data.forecast = wh_hours
                             for k in self.forecast.keys():
-                                if (wh_hour := wh_hours.get(k)) is not None and (q := (k + TIME_QOUR).isoformat() in wh_hours or (k - TIME_QOUR).isoformat() in wh_hours) is not None and (d := q or (k + TIME_DOUR).isoformat() in wh_hours or (k - TIME_DOUR).isoformat() in wh_hours) is not None and (f := wh_hour / 1000 / ((1 if q else 2) if d else 4)):
+                                if (wh_hour := wh_hours.get(k)) is not None and (q := k + TIME_QOUR in wh_hours or k - TIME_QOUR in wh_hours) is not None and (d := q or k + TIME_DOUR in wh_hours or k - TIME_DOUR in wh_hours) is not None and (f := wh_hour / 1000 / ((1 if q else 2) if d else 4)):
                                     self.forecast[k] = f
                                     _LOGGER.debug(f"Solar forecast of {solar_entry_id} for {k} ({wh_hour}): {f}")
                                     if not q:
