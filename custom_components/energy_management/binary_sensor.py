@@ -18,6 +18,7 @@ async def async_setup_entry(_: HomeAssistant, config_entry: ConfigEntry[Coordina
     async_add_entities([
         BatteryChargeFromGridSensor(config_entry.runtime_data),
         BatteryDischargeToGridSensor(config_entry.runtime_data),
+        ExportSensor(config_entry.runtime_data),
         SuppressExportSensor(config_entry.runtime_data),
         CostRateBelowMeanElectricitySensor(config_entry.runtime_data)
     ])
@@ -52,6 +53,20 @@ class BatteryDischargeToGridSensor(EnergyManagementBinarySensorEntity):
             return
         self._attr_extra_state_attributes = {k.isoformat(): v[4] for k, v in data.optimization.items()}
         self._attr_is_on = data.optimization[self.coordinator.data.now][4] and data.compensation_rate[data.now] >= 0
+
+class ExportSensor(EnergyManagementBinarySensorEntity):
+    _attr_icon = "mdi:transmission-tower-import"
+
+    def __init__(self, coordinator: Coordinator) -> None:
+        self._attr_name = "Export"
+        super().__init__(coordinator)
+
+    def update(self):
+        super().update()
+        if not (o := self.coordinator.data.optimization):
+            return
+        self._attr_extra_state_attributes = {k.isoformat(): v[5] for k, v in o.items()}
+        self._attr_is_on = o[self.coordinator.data.now][5]
 
 class SuppressExportSensor(EnergyManagementBinarySensorEntity):
     _attr_icon = "mdi:transmission-tower-import"

@@ -132,6 +132,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
         self.production: dict[datetime, float | int] = {}
         self.consumption: dict[datetime, float | int] = {}
         self.consumption_max: dict[datetime, float | int] = {}
+        self.consumption_now: float | int = 0
         self.today_consumption: dict[datetime, float | int] = {}
         self.expected_consumption: dict[datetime, float | int] = {}
         self.imported: dict[datetime, float | int] = {}
@@ -352,6 +353,12 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
             await (await self._maker.connection()).engine.dispose()
         else:
             self._maker.connection().engine.dispose()
+
+    def get_strategy(self, dt: datetime) -> str:
+        return ("daily_max" if self.optimization and not (self.optimization[dt][4] and self._data.compensation_rate[dt] >= 0) else "this_hour_max" if not self.optimization or not self.optimization[dt][5] else "this_hour_mean") if self.config_now_strategy == "auto" else self.config_now_strategy
+
+    def get_consumption(self, dt: datetime, strt: str) -> float | int:
+        return ((self.consumption_max_max * (1 + float(self.rats[dt] - self.rmin) * (self.config_coefficient - 1) / self.rang) if self.rang > 0 else 1) if strt == "daily_max" else ((c if (c := (self.consumption_max.get(dt) if strt == "this_hour_max" else (c if self.config_strategy == "hourly" and (c := self.consumption.get(dt)) and c >= 0 else self.consumption_mean))) and c >= 0 else self.consumption_max_max) * (1 + float(self.rats[dt] - self.rmin) * (self.config_coefficient - 1) / self.rang) if self.rang > 0 else 1)) if self.config_area != "disabled" else 0
 
     def _get_rates_params(self, dt: datetime) -> dict[str, datetime | Decimal]:
         return {"dt": dt} | ({"T1": Decimal(t1.state if t1.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else "0")} if self.config_fix_t1_id and (t1 := self.hass.states.get(self.config_fix_t1_id)) else {}) | ({"T2": Decimal(t2.state if t2.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else "0")} if self.config_fix_t2_id and (t2 := self.hass.states.get(self.config_fix_t2_id)) else {})
@@ -584,14 +591,15 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                     _LOGGER.debug(f"Last battery state error: {common.strepr(e)}")
             if self.battery is not None and self.consumption and next(iter(self.consumption.values())):
                 try:
-                    rats = {k: v for k, v in self._data.rates_full.items() if k >= self.now}
-                    rmin = min(rats.values())
-                    rang = float(max(rats.values()) - rmin)
-                    strt = ("daily_max" if self.optimization and not (self.optimization[self.now][4] and self._data.compensation_rate[self.now] >= 0) else "this_hour_max" if not self.optimization or not self.optimization[self.now][5] else "this_hour_mean") if self.config_now_strategy == "auto" else self.config_now_strategy
+                    self.rats = rats = {k: v for k, v in self._data.rates_full.items() if k >= self.now}
+                    self.rmin = rmin = min(rats.values())
+                    self.rang = rang = float(max(rats.values()) - rmin)
+                    strt = self.get_strategy(self.now)
+                    self.consumption_now = self.get_consumption(self.now, strt)
                     json = {
                         "rate": [(float(self._data.rates_full[k]), float(self._data.compensation_rate[k])) for k in rats.keys()],
                         "production": [self.forecast[k] for k in rats.keys()],
-                        "consumption": (([self.consumption_max_max * (1 + float(rats[self.now] - rmin) * (self.config_coefficient - 1) / rang) if rang > 0 else 1] if strt == "daily_max" else [(c if (c := (self.consumption_max.get(self.now) if strt == "this_hour_max" else (c if self.config_strategy == "hourly" and (c := self.consumption.get(k)) and c >= 0 else self.consumption_mean))) and c >= 0 else self.consumption_max_max) * (1 + float(rats[self.now] - rmin) * (self.config_coefficient - 1) / rang) if rang > 0 else 1]) + [(c if self.config_strategy == "hourly" and (c := self.consumption.get(k)) and c >= 0 else self.consumption_mean) * q for k in rats.keys() if k > self.now and (q := (1 + float(rats[k] - rmin) * (self.config_coefficient_strategy - 1) / rang) if rang > 0 else 1) is not None]) if self.config_area != "disabled" else [0 for _ in rats.keys()],
+                        "consumption": ([self.consumption_now] + [(c if self.config_strategy == "hourly" and (c := self.consumption.get(k)) and c >= 0 else self.consumption_mean) * q for k in rats.keys() if k > self.now and (q := (1 + float(rats[k] - rmin) * (self.config_coefficient_strategy - 1) / rang) if rang > 0 else 1) is not None]) if self.config_area != "disabled" else [0 for _ in rats.keys()],
                         "constraints": {"soc": self.battery / 100, "grid_power": i / 4 if self.config_import_ids and (i := sum(float(v.state) for id in self.config_import_ids if (v := self.hass.states.get(id)) and v.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE))) else 99999.9, "sell_power": float(e.state) / 4 if self.config_export_id and (e := self.hass.states.get(self.config_export_id)) and e.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else 99999.9, "charge_power": self.config_charge_power / 4, "discharge_power": self.config_discharge_power / 4, "soc_min": self.config_soc_min / 100, "soc_max": (self.config_soc_max if self.battery_max > 98 else 100) / 100, "soc_reserve": (self.config_soc_min + (0 if self._data.tomorrow or (r := min(self.reserve / self.config_capacity * 100, 100)) <= 0 else ((self.config_soc_reserve / 100) * (r / 100) * 100))) / 100, "capacity": self.config_capacity, "amortization": self.config_amortization}
                     }
                     if (r := await common.pg(self._session, URL, json = json, headers = { "X-API-Key": self.config_key })) is not None:

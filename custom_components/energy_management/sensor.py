@@ -22,6 +22,7 @@ async def async_setup_entry(_: HomeAssistant, config_entry: ConfigEntry[Coordina
         Battery(config_entry.runtime_data),
         CompRate(config_entry.runtime_data),
         Consumption(config_entry.runtime_data),
+        ConsumptionNow(config_entry.runtime_data),
         Forecast(config_entry.runtime_data),
         Grid(config_entry.runtime_data),
         Cost(config_entry.runtime_data),
@@ -189,6 +190,20 @@ class Consumption(EnergyManagementSensorEntity):
         value = {ki.isoformat(): (v or 0.5) * 4 for k, v in c.items() if (ki := k.astimezone(self.coordinator.data.zone_info)) is not None and ki.date() == today and k.minute == 0}
         self._attr_extra_state_attributes = value
         self._attr_native_value = sum(value.values())
+
+class ConsumptionNow(EnergyManagementSensorEntity):
+    def __init__(self, coordinator: Coordinator) -> None:
+        self._attr_name = "Consumption - now"
+        self._attr_device_class = "energy"
+        self._attr_state_class = "total"
+        self._attr_native_unit_of_measurement = "kWh"
+        super().__init__(coordinator)
+
+    def update(self):
+        super().update()
+        if (d := self.coordinator.data) is None or (c := self.coordinator.get_consumption(d.now, self.coordinator.get_strategy(d.now))) is None:
+            return
+        self._attr_native_value = c * 4
 
 class Forecast(EnergyManagementSensorEntity):
     def __init__(self, coordinator: Coordinator) -> None:
