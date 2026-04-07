@@ -11,6 +11,7 @@ from decimal import Decimal
 from functools import reduce
 from logging import getLogger
 from zoneinfo import ZoneInfo
+from holidays import country_holidays
 from datetime import datetime, timedelta
 from collections.abc import AsyncGenerator
 
@@ -155,6 +156,8 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
             #ATTR_SW_VERSION: coordinator._version,
             #ATTR_CONFIGURATION_URL: "https://ranware.com/"
         }
+
+        self.holidays = country_holidays(self.hass.config.country)
 
         @callback
         def action(_: datetime):
@@ -528,8 +531,8 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                             common.joinify(*self.config_exclude_entity_ids),
                             offset,
                             self.config_consumption_strategy,
-                            today.weekday(),
-                            tomorrow.weekday()
+                            today.weekday() if today not in self.holidays else 6,
+                            tomorrow.weekday() if tomorrow not in self.holidays else 6
                         )
                         self.imported.clear()
                         self.exported.clear()

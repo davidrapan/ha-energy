@@ -10,7 +10,7 @@ from aiohttp import ClientSession
 from decimal import Decimal
 
 from ...common import strepr, fruple, pg
-from .const import VAT, TIMEZONE, RATE, TARIFF, URL_CEZ, CEZ_TUPLES, URL_EGD_REGION, URL_EGD
+from .const import VAT, HOLIDAYS, TIMEZONE, RATE, TARIFF, URL_CEZ, CEZ_TUPLES, URL_EGD_REGION, URL_EGD
 
 _LOGGER = getLogger(__name__)
 
@@ -91,16 +91,16 @@ async def _get_intervals(s: ClientSession, area: str, rate: str, tariff: str, dt
     return None
 
 @cache
-def _get_tariff(tariff: tuple[tuple[time, time]] | tuple[tuple[tuple[time, time]]], weekday: int, t: time):
+def _get_tariff(tariff: tuple[tuple[time, time]] | tuple[tuple[tuple[time, time]]], dt: datetime, weekday: int, t: time):
     if tariff:
-        for start, end in tariff if tariff[0] and isinstance(tariff[0][0], time) else tariff[weekday]:
+        for start, end in tariff if tariff[0] and isinstance(tariff[0][0], time) else tariff[weekday if dt not in HOLIDAYS else 6]:
             if start <= t < end:
                 return "T2"
     return "T1"
 
 @acache
 async def _get_distribution(s: ClientSession, area: str, rate: str, tariff: str, dt: datetime) -> tuple[int, Decimal]:
-    return ((0 if t == "T1" else -1, RATE[dt.year][""] + RATE[dt.year][area][rate][t]) if (t := _get_tariff(RATE[dt.year][area][rate]["Type"][tariff[-2:]] if "Type" in RATE[dt.year][area][rate] and tariff in TARIFF and RATE[dt.year][area][rate]["Name"] == tariff[:-2] else TARIFF[tariff] if tariff in TARIFF else await _get_intervals(s, area, rate, tariff, dt.date()), dt.weekday(), dt.time())) else (0, RATE[dt.year][""] + RATE[dt.year][area][rate]["T1"])) if area != "disabled" else (0, Decimal(0))
+    return ((0 if t == "T1" else -1, RATE[dt.year][""] + RATE[dt.year][area][rate][t]) if (t := _get_tariff(RATE[dt.year][area][rate]["Type"][tariff[-2:]] if "Type" in RATE[dt.year][area][rate] and tariff in TARIFF and RATE[dt.year][area][rate]["Name"] == tariff[:-2] else TARIFF[tariff] if tariff in TARIFF else await _get_intervals(s, area, rate, tariff, dt.date()), dt, dt.weekday(), dt.time())) else (0, RATE[dt.year][""] + RATE[dt.year][area][rate]["T1"])) if area != "disabled" else (0, Decimal(0))
 
 @cache
 def _get_distribution_function(s: ClientSession, area: str, rate: str, tariff: str):

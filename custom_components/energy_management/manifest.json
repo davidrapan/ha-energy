@@ -9,7 +9,7 @@
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/davidrapan/ha-energy/issues",
-  "requirements": ["aiomysql", "aiosqlite", "asyncpg", "SQLAlchemy[asyncio]"],
+  "requirements": ["aiomysql", "aiosqlite", "asyncpg", "SQLAlchemy[asyncio]", "holidays"],
   "single_config_entry": true,
   "version": "0.0.0"
 }

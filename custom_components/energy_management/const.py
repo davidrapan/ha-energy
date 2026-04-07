@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from holidays import country_holidays
 from datetime import timedelta
 from decimal import Decimal
 
 DOMAIN = "energy_management"
+
+HOLIDAYS = country_holidays("CZ")
 
 URL = "https://optimization.ranware.com/v0"
 

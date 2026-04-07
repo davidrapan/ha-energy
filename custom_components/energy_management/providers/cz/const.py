@@ -1,9 +1,10 @@
 from datetime import time
 from decimal import Decimal
 from zoneinfo import ZoneInfo
+from holidays import country_holidays
 
 VAT = Decimal(".21")
-
+HOLIDAYS = country_holidays("CZ")
 TIMEZONE = ZoneInfo("Europe/Prague")
 
 RATE = {
