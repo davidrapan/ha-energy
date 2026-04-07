@@ -31,6 +31,7 @@ async def async_setup_entry(_: HomeAssistant, config_entry: ConfigEntry[Coordina
         CostRate(config_entry.runtime_data),
         CostRateToday(config_entry.runtime_data),
         CostRateOrder(config_entry.runtime_data),
+        CostRateNegatives(config_entry.runtime_data),
         SpotRate(config_entry.runtime_data)
     ])
 
@@ -157,6 +158,19 @@ class CostRateOrder(EnergyManagementSensorEntity):
         if (data := self.coordinator.data) is None:
             return
         self._attr_native_value = sorted(set(data.rates.values())).index(data.rates[data.now]) + 1
+
+class CostRateNegatives(EnergyManagementSensorEntity):
+    _attr_icon = "mdi:order-numeric-ascending"
+
+    def __init__(self, coordinator: Coordinator) -> None:
+        self._attr_name = "Cost rate - number of negatives"
+        super().__init__(coordinator)
+
+    def update(self):
+        super().update()
+        if (data := self.coordinator.data) is None:
+            return
+        self._attr_native_value = sum(1 for i in data.rates.values() if i < 0)
 
 class SpotRate(EnergyManagementSensorEntity):
     _attr_icon = "mdi:cash-clock"
