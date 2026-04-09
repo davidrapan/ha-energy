@@ -19,6 +19,7 @@ async def async_setup_entry(_: HomeAssistant, config_entry: ConfigEntry[Coordina
         BatteryChargeFromGridSensor(config_entry.runtime_data),
         BatteryDischargeToGridSensor(config_entry.runtime_data),
         ExportSensor(config_entry.runtime_data),
+        OverflowSensor(config_entry.runtime_data),
         SuppressExportSensor(config_entry.runtime_data),
         CostRateBelowMeanElectricitySensor(config_entry.runtime_data)
     ])
@@ -67,6 +68,31 @@ class ExportSensor(EnergyManagementBinarySensorEntity):
             return
         self._attr_extra_state_attributes = {k.isoformat(): v[5] for k, v in o.items()}
         self._attr_is_on = o[self.coordinator.data.now][5]
+
+class OverflowSensor(EnergyManagementBinarySensorEntity):
+    _attr_icon = "mdi:transmission-tower-off"
+
+    def __init__(self, coordinator: Coordinator) -> None:
+        self._attr_name = "Overflow"
+        super().__init__(coordinator)
+
+    def update(self):
+        super().update()
+        if not (data := self.coordinator.data) or not data.optimization:
+            return
+        self._attr_is_on = data.compensation_rate[data.now] <= 0
+        v = 0
+        if self._attr_is_on:
+            end_time = data.now
+            for k, v in data.compensation_rate.items():
+                if k <= data.now:
+                    continue
+                elif v <= 0:
+                    end_time = k
+                else:
+                    break
+            v = -sum(v[1] + v[6] for k, v in data.optimization.items() if data.now <= k <= end_time)
+        self._attr_extra_state_attributes["value"] = v
 
 class SuppressExportSensor(EnergyManagementBinarySensorEntity):
     _attr_icon = "mdi:transmission-tower-import"
