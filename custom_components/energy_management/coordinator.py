@@ -358,7 +358,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
             self._maker.connection().engine.dispose()
 
     def get_strategy(self, dt: datetime) -> str:
-        return ("daily_max" if self.optimization and not (self.optimization[dt][4] and self._data.compensation_rate[dt] >= 0) else "this_hour_max" if not self.optimization or not self.optimization[dt][5] else "this_hour_mean") if self.config_now_strategy == "auto" else self.config_now_strategy
+        return ("daily_max" if self.optimization and not ((self.optimization[dt][4] or self.optimization[dt][5]) and self._data.compensation_rate[dt] >= 0) else "this_hour_max" if not self.optimization or not (self.optimization[dt][5] or (self.config_now_strategy == "auto+" and self.optimization[dt][4])) else "this_hour_mean") if self.config_now_strategy in ("auto", "auto+") else self.config_now_strategy
 
     def get_consumption(self, dt: datetime, strt: str) -> float | int:
         return ((self.consumption_max_max * (1 + float(self.rats[dt] - self.rmin) * (self.config_coefficient - 1) / self.rang) if self.rang > 0 else 1) if strt == "daily_max" else ((c if (c := (self.consumption_max.get(dt) if strt == "this_hour_max" else (c if self.config_strategy == "hourly" and (c := self.consumption.get(dt)) and c >= 0 else self.consumption_mean))) and c >= 0 else self.consumption_max_max) * (1 + float(self.rats[dt] - self.rmin) * (self.config_coefficient - 1) / self.rang) if self.rang > 0 else 1)) if self.config_area != "disabled" else 0

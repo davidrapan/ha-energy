@@ -44,7 +44,7 @@ class StrategyNowSelectEntity(EnergyManagementSelectEntity):
         self._attr_key = "now_strategy"
         self._attr_name = "Strategy - now"
         self._attr_entity_category = EntityCategory.CONFIG
-        self._attr_options = ["auto", "this_hour_max", "this_hour_avg", "daily_max"]
+        self._attr_options = ["auto", "auto+", "this_hour_max", "this_hour_avg", "daily_max"]
         super().__init__(coordinator)
 
     @property
