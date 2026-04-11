@@ -218,6 +218,12 @@ class ConsumptionNow(EnergyManagementSensorEntity):
         if (d := self.coordinator.data) is None or (c := self.coordinator.get_consumption(d.now, self.coordinator.get_strategy(d.now))) is None:
             return
         self._attr_native_value = c * 4
+        if not (c := self.coordinator.consumption):
+            return
+        self._attr_extra_state_attributes["mean"] = c.get(d.now) * 4
+        self._attr_extra_state_attributes["max"] = self.coordinator.consumption_max.get(d.now) * 4
+        self._attr_extra_state_attributes["daily_mean"] = self.coordinator.consumption_mean * 4
+        self._attr_extra_state_attributes["daily_max"] = self.coordinator.consumption_max_max * 4
 
 class Forecast(EnergyManagementSensorEntity):
     def __init__(self, coordinator: Coordinator) -> None:
