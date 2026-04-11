@@ -170,7 +170,7 @@ class CostRateNegatives(EnergyManagementSensorEntity):
         super().update()
         if (data := self.coordinator.data) is None:
             return
-        self._attr_native_value = sum(1 for i in data.rates.values() if i < 0)
+        self._attr_native_value = sum(1 for k, v in data.rates.items() if k >= data.now and v < 0)
 
 class SpotRate(EnergyManagementSensorEntity):
     _attr_icon = "mdi:cash-clock"
