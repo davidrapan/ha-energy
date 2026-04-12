@@ -160,7 +160,7 @@ class CostRateOrder(EnergyManagementSensorEntity):
         self._attr_native_value = sorted(set(data.rates.values())).index(data.rates[data.now]) + 1
 
 class CostRateNegatives(EnergyManagementSensorEntity):
-    _attr_icon = "mdi:order-numeric-ascending"
+    _attr_icon = "mdi:order-numeric-descending"
 
     def __init__(self, coordinator: Coordinator) -> None:
         self._attr_name = "Cost rate - number of negatives"
@@ -171,6 +171,11 @@ class CostRateNegatives(EnergyManagementSensorEntity):
         if (data := self.coordinator.data) is None:
             return
         self._attr_native_value = sum(1 for k, v in data.rates.items() if k >= data.now and v < 0)
+        capability = self.coordinator.config_charge_power / 4 * self._attr_native_value / self.coordinator.config_capacity * 100
+        battery = v if (v := self.coordinator.config_soc_max - capability) > self.coordinator.config_soc_min else self.coordinator.config_soc_min
+        self._attr_extra_state_attributes["capability"] = capability
+        self._attr_extra_state_attributes["battery"] = battery
+        self._attr_extra_state_attributes["limit"] = battery <= self.coordinator.battery if self.coordinator.battery is not None else False
 
 class SpotRate(EnergyManagementSensorEntity):
     _attr_icon = "mdi:cash-clock"
