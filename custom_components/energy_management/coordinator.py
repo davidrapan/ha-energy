@@ -358,7 +358,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
             self._maker.connection().engine.dispose()
 
     def get_strategy(self, dt: datetime) -> str:
-        return ("daily_max" if self.optimization and not ((self.optimization[dt][4] or self.optimization[dt][5]) and self._data.compensation_rate[dt] >= 0) else "this_hour_max" if not self.optimization or not (self.optimization[dt][5] or (self.config_now_strategy == "auto+" and self.optimization[dt][4])) else "this_hour_mean") if self.config_now_strategy in ("auto", "auto+") else self.config_now_strategy
+        return ("daily_max" if self.optimization and not ((self.optimization[dt][4] or self.optimization[dt][5])) else "this_hour_max" if not self.optimization or not (self.optimization[dt][5] or (self.config_now_strategy == "auto+" and self.optimization[dt][4])) else "this_hour_mean") if self.config_now_strategy in ("auto", "auto+") else self.config_now_strategy
 
     def get_consumption(self, dt: datetime, strt: str) -> float | int:
         return ((self.consumption_max_max * (1 + float(self.rats[dt] - self.rmin) * (self.config_coefficient - 1) / self.rang) if self.rang > 0 else 1) if strt == "daily_max" else ((c if (c := (self.consumption_max.get(dt) if strt == "this_hour_max" else (c if self.config_strategy == "hourly" and (c := self.consumption.get(dt)) and c >= 0 else self.consumption_mean))) and c >= 0 else self.consumption_max_max) * (1 + float(self.rats[dt] - self.rmin) * (self.config_coefficient - 1) / self.rang) if self.rang > 0 else 1)) if self.config_area != "disabled" else 0
@@ -606,7 +606,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                         "constraints": {"soc": self.battery / 100, "grid_power": i / 1000 / 4 if self.config_import_ids and (i := sum(float(v.state) for id in self.config_import_ids if (v := self.hass.states.get(id)) and v.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE))) else 99999.9, "sell_power": float(e.state) / 1000 / 4 if self.config_export_id and (e := self.hass.states.get(self.config_export_id)) and e.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else 99999.9, "charge_power": self.config_charge_power / 4, "discharge_power": self.config_discharge_power / 4, "soc_min": self.config_soc_min / 100, "soc_max": (self.config_soc_max if self.battery_max > 98 else 100) / 100, "soc_reserve": (self.config_soc_min + (0 if self._data.tomorrow or (r := min(self.reserve / self.config_capacity * 100, 100)) <= 0 else ((self.config_soc_reserve / 100) * (r / 100) * 100))) / 100, "capacity": self.config_capacity, "amortization": self.config_amortization}
                     }
                     if (r := await common.pg(self._session, URL, json = json, headers = { "X-API-Key": self.config_key })) is not None:
-                        _LOGGER.debug(f"Optimization ({strt}: {self.consumption_max_max}) of {json}: {r}")
+                        _LOGGER.debug(f"Optimization ({strt}: {self.consumption_now}) of {json}: {r}")
                         self.predicted_cost = float(r[0][1])
                         self.predicted_amortization = float(r[0][3])
                         self.optimization = {k: v for k, v in zip(rats.keys(), r[1])}
