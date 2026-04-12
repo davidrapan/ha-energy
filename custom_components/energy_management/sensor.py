@@ -79,7 +79,7 @@ class Cost(EnergyManagementRestoreSensor):
 
     def __init__(self, coordinator: Coordinator) -> None:
         self._attr_name = "Cost"
-        self._attr_state_class = "total_increasing"
+        self._attr_state_class = "total"
         self._attr_native_unit_of_measurement = "CZK" if coordinator.hass.config.currency in ("CZK", "Kč") else "EUR"
         self._attr_suggested_display_precision = 2
         super().__init__(coordinator)
@@ -94,7 +94,7 @@ class CostToday(EnergyManagementSensorEntity):
 
     def __init__(self, coordinator: Coordinator) -> None:
         self._attr_name = "Cost - today"
-        self._attr_state_class = "total_increasing"
+        self._attr_state_class = "total"
         self._attr_native_unit_of_measurement = "CZK" if coordinator.hass.config.currency in ("CZK", "Kč") else "EUR"
         self._attr_suggested_display_precision = 2
         super().__init__(coordinator)
