@@ -19,6 +19,7 @@ async def async_setup_entry(_: HomeAssistant, config_entry: ConfigEntry[Coordina
     async_add_entities([
         ChargePowerNumberEntity(config_entry.runtime_data),
         DischargePowerNumberEntity(config_entry.runtime_data),
+        LimitSOCNumberEntity(config_entry.runtime_data),
         MaxSOCNumberEntity(config_entry.runtime_data),
         MinSOCNumberEntity(config_entry.runtime_data),
         ReserveSOCNumberEntity(config_entry.runtime_data),
@@ -31,6 +32,26 @@ async def async_setup_entry(_: HomeAssistant, config_entry: ConfigEntry[Coordina
 class EnergyManagementRestoreNumber(EnergyManagementEntity, RestoreNumber):
     def update_options(self, value: int | float | None):
         self.coordinator.hass.config_entries.async_update_entry(self.coordinator.config_entry, options = {**self.coordinator.config_entry.options} | {self._attr_key: value})
+
+class LimitSOCNumberEntity(EnergyManagementRestoreNumber):
+    def __init__(self, coordinator):
+        self._attr_key = "soc_limit"
+        self._attr_name = "Battery - limit"
+        self._attr_device_class = NumberDeviceClass.BATTERY
+        self._attr_entity_category = EntityCategory.CONFIG
+        self._attr_native_unit_of_measurement = "%"
+        self._attr_mode = NumberMode.BOX
+        self._attr_max_value = 100
+        self._attr_min_value = 0
+        super().__init__(coordinator)
+
+    @property
+    def native_value(self):
+        return self.coordinator.config_soc_limit
+
+    async def async_set_native_value(self, value: float):
+        self.coordinator.config_soc_limit = int(value)
+        self.update_options(self.coordinator.config_soc_limit)
 
 class MaxSOCNumberEntity(EnergyManagementRestoreNumber):
     def __init__(self, coordinator):
@@ -57,7 +78,6 @@ class MaxSOCNumberEntity(EnergyManagementRestoreNumber):
     async def async_set_native_value(self, value: float):
         self.coordinator.config_soc_max = int(value)
         self.update_options(self.coordinator.config_soc_max)
-        self.async_write_ha_state()
 
 class MinSOCNumberEntity(EnergyManagementRestoreNumber):
     def __init__(self, coordinator):
@@ -84,7 +104,6 @@ class MinSOCNumberEntity(EnergyManagementRestoreNumber):
     async def async_set_native_value(self, value: float):
         self.coordinator.config_soc_min = int(value)
         self.update_options(self.coordinator.config_soc_min)
-        self.async_write_ha_state()
 
 class ReserveSOCNumberEntity(EnergyManagementRestoreNumber):
     def __init__(self, coordinator):
@@ -105,7 +124,6 @@ class ReserveSOCNumberEntity(EnergyManagementRestoreNumber):
     async def async_set_native_value(self, value: float):
         self.coordinator.config_soc_reserve = int(value)
         self.update_options(self.coordinator.config_soc_reserve)
-        self.async_write_ha_state()
 
 class ChargePowerNumberEntity(EnergyManagementRestoreNumber):
     def __init__(self, coordinator):
@@ -133,7 +151,6 @@ class ChargePowerNumberEntity(EnergyManagementRestoreNumber):
     async def async_set_native_value(self, value: float):
         self.coordinator.config_charge_power = value
         self.update_options(value)
-        self.async_write_ha_state()
 
 class DischargePowerNumberEntity(EnergyManagementRestoreNumber):
     def __init__(self, coordinator):
@@ -161,7 +178,6 @@ class DischargePowerNumberEntity(EnergyManagementRestoreNumber):
     async def async_set_native_value(self, value: float):
         self.coordinator.config_discharge_power = value
         self.update_options(value)
-        self.async_write_ha_state()
 
 class CoefficientNumberEntity(EnergyManagementRestoreNumber):
     def __init__(self, coordinator):
@@ -187,7 +203,6 @@ class CoefficientNumberEntity(EnergyManagementRestoreNumber):
     async def async_set_native_value(self, value: float):
         self.coordinator.config_coefficient = value
         self.update_options(value)
-        self.async_write_ha_state()
 
 class CoefficientStrategyNumberEntity(EnergyManagementRestoreNumber):
     def __init__(self, coordinator):
@@ -213,7 +228,6 @@ class CoefficientStrategyNumberEntity(EnergyManagementRestoreNumber):
     async def async_set_native_value(self, value: float):
         self.coordinator.config_coefficient_strategy = value
         self.update_options(value)
-        self.async_write_ha_state()
 
 class ConsumptionStrategyNumberEntity(EnergyManagementRestoreNumber):
     def __init__(self, coordinator):
@@ -231,7 +245,6 @@ class ConsumptionStrategyNumberEntity(EnergyManagementRestoreNumber):
     async def async_set_native_value(self, value: float):
         self.coordinator.config_consumption_strategy = int(value)
         self.update_options(self.coordinator.config_consumption_strategy)
-        self.async_write_ha_state()
 
 class SuppressExportSOCThresholdNumberEntity(EnergyManagementRestoreNumber):
     def __init__(self, coordinator):
@@ -252,4 +265,3 @@ class SuppressExportSOCThresholdNumberEntity(EnergyManagementRestoreNumber):
     async def async_set_native_value(self, value: float):
         self.coordinator.config_soc_threshold = int(value)
         self.update_options(self.coordinator.config_soc_threshold)
-        self.async_write_ha_state()

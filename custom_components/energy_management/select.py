@@ -37,7 +37,6 @@ class StrategySelectEntity(EnergyManagementSelectEntity):
     async def async_select_option(self, value: str):
         self.coordinator.config_strategy = value
         self.update_options(self.coordinator.config_strategy)
-        self.async_write_ha_state()
 
 class StrategyNowSelectEntity(EnergyManagementSelectEntity):
     def __init__(self, coordinator):
@@ -54,4 +53,3 @@ class StrategyNowSelectEntity(EnergyManagementSelectEntity):
     async def async_select_option(self, value: str):
         self.coordinator.config_now_strategy = value
         self.update_options(self.coordinator.config_now_strategy)
-        self.async_write_ha_state()
