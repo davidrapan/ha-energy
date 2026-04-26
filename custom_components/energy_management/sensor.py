@@ -9,7 +9,7 @@ from homeassistant.components.sensor import SensorEntity, RestoreSensor
 from homeassistant.const import ATTR_IDENTIFIERS, ATTR_NAME, ATTR_VIA_DEVICE
 
 from .const import DOMAIN
-from .common import slugify
+from .common import slugify, strepr
 from .coordinator import Coordinator
 from .entity import EnergyManagementEntity
 
@@ -220,15 +220,18 @@ class ConsumptionNow(EnergyManagementSensorEntity):
 
     def update(self):
         super().update()
-        if (d := self.coordinator.data) is None or (c := self.coordinator.get_consumption(d.now, self.coordinator.get_strategy(d.now))) is None:
-            return
-        self._attr_native_value = c * 4
-        if not (c := self.coordinator.consumption):
-            return
-        self._attr_extra_state_attributes["mean"] = c.get(d.now) * 4
-        self._attr_extra_state_attributes["max"] = self.coordinator.consumption_max.get(d.now) * 4
-        self._attr_extra_state_attributes["daily_mean"] = self.coordinator.consumption_mean * 4
-        self._attr_extra_state_attributes["daily_max"] = self.coordinator.consumption_max_max * 4
+        try:
+            if (d := self.coordinator.data) is None or (c := self.coordinator.get_consumption(d.now, self.coordinator.get_strategy(d.now))) is None:
+                return
+            self._attr_native_value = c * 4
+            if not (c := self.coordinator.consumption):
+                return
+            self._attr_extra_state_attributes["mean"] = c.get(d.now) * 4
+            self._attr_extra_state_attributes["max"] = self.coordinator.consumption_max.get(d.now) * 4
+            self._attr_extra_state_attributes["daily_mean"] = self.coordinator.consumption_mean * 4
+            self._attr_extra_state_attributes["daily_max"] = self.coordinator.consumption_max_max * 4
+        except Exception as e:
+            _LOGGER.debug(f"Consumption - now sensor error: {strepr(e)}")
 
 class Forecast(EnergyManagementSensorEntity):
     def __init__(self, coordinator: Coordinator) -> None:
