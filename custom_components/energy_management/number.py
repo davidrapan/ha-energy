@@ -25,8 +25,7 @@ async def async_setup_entry(_: HomeAssistant, config_entry: ConfigEntry[Coordina
         ReserveSOCNumberEntity(config_entry.runtime_data),
         CoefficientNumberEntity(config_entry.runtime_data),
         CoefficientStrategyNumberEntity(config_entry.runtime_data),
-        ConsumptionStrategyNumberEntity(config_entry.runtime_data),
-        SuppressExportSOCThresholdNumberEntity(config_entry.runtime_data)
+        ConsumptionStrategyNumberEntity(config_entry.runtime_data)
     ])
 
 class EnergyManagementRestoreNumber(EnergyManagementEntity, RestoreNumber):

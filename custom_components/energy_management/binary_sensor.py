@@ -103,10 +103,10 @@ class SuppressExportSensor(EnergyManagementBinarySensorEntity):
 
     def update(self):
         super().update()
-        if not (data := self.coordinator.data) or not data.optimization:
+        if not (data := self.coordinator.data):
             return
         self._attr_extra_state_attributes = {k.astimezone(self.coordinator.data.zone_info).isoformat(): v < 0 for k, v in data.compensation_rate.items()}
-        self._attr_is_on = data.optimization[self.coordinator.data.now][0] > self.coordinator.config_soc_threshold and data.compensation_rate[data.now] < 0
+        self._attr_is_on = data.compensation_rate[data.now] < 0
 
 class CostRateBelowMeanElectricitySensor(EnergyManagementBinarySensorEntity):
     _attr_icon = "mdi:cash-clock"
