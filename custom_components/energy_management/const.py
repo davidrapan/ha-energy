@@ -49,7 +49,7 @@ filtered_diff AS (
 arithmetic AS (
     SELECT
         start_ts,
-        CASE WHEN day_of_week IN ({{slot}}) THEN hour_of_day ELSE hour_of_day + 24 END AS hour_of_day,
+        CASE WHEN day_of_week IN ({{slot}}) OR DATE({datetime}) = DATE({current_timestamp}) THEN hour_of_day ELSE hour_of_day + 24 END AS hour_of_day,
         day_of_week,
         SUM(CASE WHEN statistic_id IN ({from_ids}) THEN diff ELSE 0 END)
         - SUM(CASE WHEN statistic_id IN ({to_ids}, {exclude_ids}) THEN diff ELSE 0 END) as essential,
@@ -61,9 +61,9 @@ arithmetic AS (
         SUM((CASE WHEN statistic_id IN ({cost_ids}) THEN diff ELSE 0 END)) AS cost,
         SUM((CASE WHEN statistic_id IN ({compensation_ids}) THEN diff ELSE 0 END)) AS compensation
     FROM 
-        filtered_diff
+        filtered_diff AS t
     WHERE 
-        day_of_week IN ({{slot}}, {{next_slot}})
+        day_of_week IN ({{slot}}, {{next_slot}}) OR DATE({datetime}) = DATE({current_timestamp})
     GROUP BY 
         start_ts
 )
