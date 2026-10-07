@@ -16,6 +16,7 @@ async def async_setup_entry(_: HomeAssistant, config_entry: ConfigEntry[Coordina
     _LOGGER.debug(f"async_setup_entry: {config_entry}")
 
     async_add_entities([
+        BatterySensor(config_entry.runtime_data),
         BatteryChargeFromGridSensor(config_entry.runtime_data),
         BatteryDischargeToGridSensor(config_entry.runtime_data),
         ExportSensor(config_entry.runtime_data),
@@ -26,6 +27,19 @@ async def async_setup_entry(_: HomeAssistant, config_entry: ConfigEntry[Coordina
 
 class EnergyManagementBinarySensorEntity(EnergyManagementEntity, BinarySensorEntity):
     pass
+
+class BatterySensor(EnergyManagementBinarySensorEntity):
+    _attr_icon = "mdi:power-plug-battery"
+
+    def __init__(self, coordinator: Coordinator) -> None:
+        self._attr_name = "Battery"
+        super().__init__(coordinator)
+
+    def update(self):
+        super().update()
+        if not (o := self.coordinator.data.optimization):
+            return
+        self._attr_is_on = self.coordinator.battery == o[self.coordinator.data.now][0]
 
 class BatteryChargeFromGridSensor(EnergyManagementBinarySensorEntity):
     _attr_icon = "mdi:power-plug-battery"
