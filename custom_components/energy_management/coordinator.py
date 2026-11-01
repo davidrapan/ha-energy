@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 import asyncio
 import itertools
+import traceback
 
 from typing import Any
 from pathlib import Path
@@ -283,7 +284,7 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
 
         if mappings and (values := [m for m in mappings for _ in range(4)]):
             if (f := values[0].get("idx")) is not None and f != 0:
-                values = [{} for _ in range((f - 1) * 4)] + values
+                values = [{} for _ in range(f * 4)] + values
             for k, v in itertools.zip_longest(self.consumption.keys(), values, fillvalue = {}):
                 if k:
                     yield k, {vk: vv / 4 if (vv := v.get(vk)) is not None else None for vk in v.keys() if vk != "idx"} if f == 0 or k.astimezone(time_zone).hour == v.get("idx") else {}
@@ -514,7 +515,11 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                 battery_from = battery.get("from", [])
                 battery_to = battery.get("to", [])
                 registry = entity_registry.async_get(self.hass)
-                battery_soc = [i.entity_id for j in battery_from if (e := registry.entities.get_entries_for_device_id(registry.async_get(j).device_id)) for i in e if "battery" in (i.original_device_class, i.device_class)] if not self.config_battery_entity_ids else self.config_battery_entity_ids
+                battery_soc = ""
+                try:
+                    battery_soc = [i.entity_id for j in battery_from if (e := registry.entities.get_entries_for_device_id(registry.async_get(j).device_id)) for i in e if "battery" in (i.original_device_class, i.device_class)] if not self.config_battery_entity_ids else self.config_battery_entity_ids
+                except Exception as e:
+                    _LOGGER.debug(f"Battery SOC error: {common.strepr(e)}")
                 _LOGGER.debug(f"Production: {production_from}, Grid from: {grid_from}, Grid to: {grid_to}, Battery from: {battery_from}, Battery to: {battery_to}, Battery: {battery_soc}")
                 recorder = get_instance(self.hass)
                 try:
@@ -555,11 +560,11 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                                 self.consumption_mean = (sum(c) / len(c)) if (c := [v for kk, v in self.consumption.items() if kk <= k and v is not None]) else self.consumption_mean
                                 self.consumption_max_max = max(self.consumption_max[k], self.consumption_max_max) if self.consumption_max[k] is not None else self.consumption_max_max
                         for k in self.consumption.keys():
+                            if self.consumption[k] is None:
+                                self.consumption[k] = self.consumption_mean
+                            if self.consumption_max[k] is None:
+                                self.consumption_max[k] = self.consumption_max_max
                             if k.astimezone(tzn).date() == today:
-                                if self.consumption[k] is None:
-                                    self.consumption[k] = self.consumption_mean
-                                if self.consumption_max[k] is None:
-                                    self.consumption_max[k] = self.consumption_max_max
                                 if self.expected_consumption[k] is None:
                                     self.expected_consumption[k] = self.consumption[k]
                         self.consumption_mean = (sum(c) / len(c)) if (c := [v for kk, v in self.consumption.items() if kk.astimezone(tzn).date() == today and v is not None]) else 0.5
@@ -568,7 +573,8 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                         date_anchor = tomorrow if sunrise_datetime in self.consumption else today
                         for k, v in self.consumption.items():
                             if k.astimezone(tzn).date() == date_anchor:
-                                if (vv := v - self.forecast.get(k, 0)) > 0:
+                                # Maybe i should fill empty self.consumption for tomorrow too?
+                                if (vv := (v if v is not None else self.consumption_mean) - self.forecast.get(k, 0)) > 0:
                                     until_sunrise_consumption += vv
                                     sunrise_datetime = k
                                 else:
@@ -584,10 +590,15 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                                 self.cost_total[today] = reduce(add, map(lambda i: i["stat"]["sum"], _get_statistics_for_entity(all_stats, c)))
                             except Exception as e:
                                 _LOGGER.debug(f"Cost statistics error: {common.strepr(e)}")
-                        if battery_soc:
-                            self.battery_max = float(await self._execute_simple(generate_query_string_simple(recorder.dialect_name == SupportedDialect.SQLITE, common.joinify(*battery_soc), offset, 15)))
+                        try:
+                            if battery_soc:
+                                self.battery_max = float(await self._execute_simple(generate_query_string_simple(recorder.dialect_name == SupportedDialect.SQLITE, common.joinify(*battery_soc), offset, 15)))
+                        except Exception as e:
+                            _LOGGER.debug(f"Max battery state error: {common.strepr(e)}")
                 except Exception as e:
-                    _LOGGER.debug(f"Consumption statistics error: {common.strepr(e)}")
+                    tb = traceback.extract_tb(e.__traceback__)
+                    _filename, line_no, _func_name, code_text = tb[-1]
+                    _LOGGER.debug(f"Consumption statistics error: {common.strepr(e)} on line {line_no} - {code_text}")
                 try:
                     if battery_soc and (stats := await recorder.async_add_executor_job(_get_significant_states_with_session, self.hass, self.now, battery_soc)):
                         self.battery = min(map(lambda i: float(stats[i][-1]["s"]), stats)) if self.config_battery == "min" else (sum(map(lambda i: float(stats[i][-1]["s"]), stats)) / len(stats))
@@ -600,11 +611,14 @@ class Coordinator(DataUpdateCoordinator[CoordinatorData]):
                     self.rang = rang = float(max(rats.values()) - rmin)
                     strt = self.get_strategy(self.now)
                     self.consumption_now = self.get_consumption(self.now, strt)
+                    soc_min = self.config_soc_min
+                    #if self.optimization and self.optimization[self.now][5]:
+                    #    soc_min = self.config_soc_min + 2
                     json = {
                         "rate": [(float(self._data.rates_full[k]), float(self._data.compensation_rate[k])) for k in rats.keys()],
-                        "production": [self.forecast[k] for k in rats.keys()],
+                        "production": [self.forecast.get(k, 0) for k in rats.keys()],
                         "consumption": ([self.consumption_now] + [(c if self.config_strategy == "hourly" and (c := self.consumption.get(k)) and c >= 0 else self.consumption_mean) * q for k in rats.keys() if k > self.now and (q := (1 + float(rats[k] - rmin) * (self.config_coefficient_strategy - 1) / rang) if rang > 0 else 1) is not None]) if self.config_area != "disabled" else [0 for _ in rats.keys()],
-                        "constraints": {"soc": self.battery / 100, "grid_power": i / 1000 / 4 if self.config_import_ids and (i := sum(float(v.state) for id in self.config_import_ids if (v := self.hass.states.get(id)) and v.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE))) else 99999.9, "sell_power": float(e.state) / 1000 / 4 if self.config_export_id and (e := self.hass.states.get(self.config_export_id)) and e.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else 99999.9, "charge_power": self.config_charge_power / 4, "discharge_power": self.config_discharge_power / 4, "soc_limit": self.config_soc_limit / 100, "soc_max": ((self.config_soc_limit if not self.optimization or not self.optimization[self.now][3] else self.config_soc_max) if self.battery_max > self.config_soc_limit - 2 else 100) / 100, "soc_min": self.config_soc_min / 100, "soc_reserve": (self.config_soc_min + (0 if self._data.tomorrow or (r := min(self.reserve / self.config_capacity * 100, 100)) <= 0 else ((self.config_soc_reserve / 100) * (r / 100) * 100))) / 100, "capacity": self.config_capacity, "amortization": self.config_amortization}
+                        "constraints": {"soc": self.battery / 100, "grid_power": i / 1000 / 4 if self.config_import_ids and (i := sum(float(v.state) for id in self.config_import_ids if (v := self.hass.states.get(id)) and v.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE))) else 99999.9, "sell_power": float(e.state) / 1000 / 4 if self.config_export_id and (e := self.hass.states.get(self.config_export_id)) and e.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE) else 99999.9, "charge_power": self.config_charge_power / 4, "discharge_power": self.config_discharge_power / 4, "soc_limit": self.config_soc_limit / 100, "soc_max": ((self.config_soc_limit if not self.optimization or not self.optimization[self.now][3] else self.config_soc_max) if self.battery_max > self.config_soc_limit - 2 else 100) / 100, "soc_min": soc_min / 100, "soc_reserve": (self.config_soc_min + (0 if self._data.tomorrow or (r := min(self.reserve / self.config_capacity * 100, 100)) <= 0 else ((self.config_soc_reserve / 100) * (r / 100) * 100))) / 100, "capacity": self.config_capacity, "amortization": self.config_amortization}
                     }
                     if (r := await common.pg(self._session, URL, json = json, headers = { "X-API-Key": self.config_key })) is not None:
                         _LOGGER.debug(f"Optimization ({strt}: {self.consumption_now}) of {json}: {r}")
